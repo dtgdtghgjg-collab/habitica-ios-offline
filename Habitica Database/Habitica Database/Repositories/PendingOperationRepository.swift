@@ -110,7 +110,7 @@ public class PendingOperationRepository: BaseLocalRepository {
         realm.refresh()
         let backoffPredicate = includeBackoff
             ? NSPredicate(value: true)
-            : NSPredicate(format: "nextAttemptAt == nil OR nextAttemptAt <= %@", Date())
+            : NSPredicate(format: "nextAttemptAt == nil OR nextAttemptAt <= %@", Date() as NSDate)
         return realm.objects(RealmPendingOperation.self)
             .filter("userID == %@", userID)
             .filter(backoffPredicate)
