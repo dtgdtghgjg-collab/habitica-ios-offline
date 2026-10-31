@@ -29,7 +29,7 @@ jobs:
             -workspace Habitica.xcworkspace \
             -scheme Habitica \
             -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build/DerivedData \
             CODE_SIGNING_ALLOWED=NO \
             build
