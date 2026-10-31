@@ -133,15 +133,15 @@ public class OfflineGameContentRepository: BaseLocalRepository {
         }
         realm.refresh()
 
-        let food = realm.objects(RealmFood.self)
+        let food = Array(realm.objects(RealmFood.self)
             .filter("canDrop == true")
-            .compactMap { definition(key: $0.key, text: $0.text) }
-        let eggs = realm.objects(RealmEgg.self)
+            .compactMap { self.definition(key: $0.key, text: $0.text) })
+        let eggs = Array(realm.objects(RealmEgg.self)
             .filter { Self.droppableEggKeys.contains($0.key ?? "") }
-            .compactMap { definition(key: $0.key, text: $0.text) }
-        let potions = realm.objects(RealmHatchingPotion.self)
+            .compactMap { self.definition(key: $0.key, text: $0.text) })
+        let potions = Array(realm.objects(RealmHatchingPotion.self)
             .filter { Self.droppablePotionKeys.contains($0.key ?? "") }
-            .compactMap { definition(key: $0.key, text: $0.text) }
+            .compactMap { self.definition(key: $0.key, text: $0.text) })
 
         return OfflineDropTables(food: food, eggs: eggs, potions: potions)
     }
@@ -179,7 +179,7 @@ public class OfflineGameContentRepository: BaseLocalRepository {
             return []
         }
         realm.refresh()
-        return realm.objects(RealmGear.self)
+        return Array(realm.objects(RealmGear.self)
             .filter("released == true")
             .compactMap { gear -> OfflineGearDefinition? in
                 guard let key = gear.key, key.isEmpty == false else {
@@ -196,7 +196,7 @@ public class OfflineGameContentRepository: BaseLocalRepository {
                                             intelligence: gear.intelligence,
                                             constitution: gear.constitution,
                                             perception: gear.perception)
-            }
+            })
     }
 
     public func gear(key: String) -> OfflineGearDefinition? {
