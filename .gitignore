@@ -38,7 +38,8 @@ fastlane/Preview.html
 /fastlane/Fastfile
 /fastlane/Snapfile
 /fastlane/Appfile
-/HabitRPG/Generated/Secrets.swift
+# Secrets.swift is committed as a CI placeholder (empty values). The real
+# values live in secrets.yml and are injected locally.
 /secrets.yml
 /Habitica-Staff
 *.zip
