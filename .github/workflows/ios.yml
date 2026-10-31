@@ -14,8 +14,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode 16.4
-        run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+      # The app uses iOS 26 APIs under #available(iOS 26.0, *), so it must be
+      # compiled against the Xcode 26 SDK. Try the newest Xcode 26.x present on
+      # the runner first, then fall back through older 26.x releases.
+      - name: Select Xcode 26
+        run: |
+          for ver in 26.6 26.5 26.4 26.3 26.2 26.1.1 26.1; do
+            if [ -d "/Applications/Xcode_${ver}.app" ]; then
+              sudo xcode-select -s "/Applications/Xcode_${ver}.app/Contents/Developer"
+              exit 0
+            fi
+          done
+          echo "No Xcode 26.x found; available:" >&2
+          ls -1 /Applications | grep -i xcode >&2
+          exit 1
 
       - name: Show Xcode version
         run: xcodebuild -version
