@@ -72,7 +72,10 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
         if OfflineState.shared.isStandalone, let userID = OfflineState.shared.currentUserID {
             OfflineEconomyManager.shared.sellItem(userID: userID, key: item.key ?? "", value: item.value)
             ToastManager.show(toast: toastView)
-            return Signal(value: nil)
+            return Signal<UserProtocol?, Never> { observer, _ in
+                observer.send(value: nil)
+                observer.sendCompleted()
+            }
         }
         let call = SellItemCall(item: item)
 
@@ -120,7 +123,10 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
     func equip(type: String, key: String) -> Signal<UserItemsProtocol?, Never> {
         if OfflineState.shared.isStandalone, let userID = OfflineState.shared.currentUserID {
             OfflineMutationRepository().equip(userID: userID, type: type, key: key)
-            return Signal(value: nil)
+            return Signal<UserItemsProtocol?, Never> { observer, _ in
+                observer.send(value: nil)
+                observer.sendCompleted()
+            }
         }
         let call = EquipCall(type: type, itemKey: key)
 
@@ -171,7 +177,10 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
                                                                   gemCost: value,
                                                                   quantity: quantity)
             Self.showOfflinePurchaseToast(result: result, text: text, quantity: quantity)
-            return Signal(value: nil)
+            return Signal<UserProtocol?, Never> { observer, _ in
+                observer.send(value: nil)
+                observer.sendCompleted()
+            }
         }
         let call = PurchaseItemCall(purchaseType: purchaseType, key: key, quantity: quantity)
         
@@ -240,7 +249,10 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
         if OfflineState.shared.isStandalone, let userID = OfflineState.shared.currentUserID {
             let result = OfflineEconomyManager.shared.buyWithGold(userID: userID, key: key)
             Self.showOfflinePurchaseToast(result: result, text: text, quantity: 1)
-            return Signal(value: nil)
+            return Signal<UserProtocol?, Never> { observer, _ in
+                observer.send(value: nil)
+                observer.sendCompleted()
+            }
         }
         let call = PurchaseQuestCall(key: key)
         
@@ -375,6 +387,9 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
         if case .success = result {
             UINotificationFeedbackGenerator.oneShotNotificationOccurred(.success)
         }
-        return Signal(value: nil)
+        return Signal<BuyResponseProtocol?, Never> { observer, _ in
+            observer.send(value: nil)
+            observer.sendCompleted()
+        }
     }
 }

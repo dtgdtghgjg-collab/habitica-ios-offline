@@ -57,7 +57,10 @@ class UserRepository: BaseRepository<UserLocalRepository> {
     func allocate(attributePoint: String) -> Signal<StatsProtocol?, Never> {
         if OfflineState.shared.isStandalone {
             Self.allocatePointsLocally(attribute: attributePoint)
-            return Signal(value: localRepository.getUserAsync(currentUserId ?? "")?.stats)
+            return Signal<StatsProtocol?, Never> { observer, _ in
+                observer.send(value: localRepository.getUserAsync(currentUserId ?? "")?.stats)
+                observer.sendCompleted()
+            }
         }
         return AllocateAttributePointCall(attribute: attributePoint).objectSignal.on(value: {[weak self] stats in
             if let userId = self?.currentUserId, let stats = stats {
@@ -72,7 +75,10 @@ class UserRepository: BaseRepository<UserLocalRepository> {
                                        intelligence: intelligence,
                                        constitution: constitution,
                                        perception: perception)
-            return Signal(value: localRepository.getUserAsync(currentUserId ?? "")?.stats)
+            return Signal<StatsProtocol?, Never> { observer, _ in
+                observer.send(value: localRepository.getUserAsync(currentUserId ?? "")?.stats)
+                observer.sendCompleted()
+            }
         }
         return BulkAllocateAttributePointsCall(strength: strength, intelligence: intelligence, constitution: constitution, perception: perception)
             .objectSignal.on(value: { stats in
@@ -247,7 +253,10 @@ class UserRepository: BaseRepository<UserLocalRepository> {
     func updateUser(_ updateDict: [String: Encodable?]) -> Signal<UserProtocol?, Never> {
         if OfflineState.shared.isStandalone {
             applyUserUpdateLocally(updateDict)
-            return Signal(value: localRepository.getUserAsync(currentUserId ?? ""))
+            return Signal<UserProtocol?, Never> { observer, _ in
+                observer.send(value: localRepository.getUserAsync(currentUserId ?? ""))
+                observer.sendCompleted()
+            }
         }
         return UpdateUserCall(updateDict).objectSignal.on(value: handleUserUpdate())
     }

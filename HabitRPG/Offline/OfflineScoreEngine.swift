@@ -192,7 +192,10 @@ final class OfflineScoreEngine {
                                            health: outcome.stats.health,
                                            magic: outcome.stats.mana,
                                            temp: tempResponse(drops: outcome.drops, quest: outcome.quest))
-        return Signal(value: response)
+        return Signal<TaskResponseProtocol?, Never> { observer, _ in
+            observer.send(value: response)
+            observer.sendCompleted()
+        }
     }
 
     // MARK: - Context

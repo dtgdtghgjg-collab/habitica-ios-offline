@@ -305,7 +305,10 @@ class TaskRepository: BaseRepository<TaskLocalRepository> {
         } else {
             OfflineSyncEngine.shared.enqueueUpdate(task: task)
         }
-        return Signal(value: task)
+        return Signal<TaskProtocol?, Never> { observer, _ in
+            observer.send(value: task)
+            observer.sendCompleted()
+        }
     }
     
     func createChallengeTask(challengeID: String, task: TaskProtocol) -> Signal<TaskProtocol?, Never> {
@@ -360,7 +363,10 @@ class TaskRepository: BaseRepository<TaskLocalRepository> {
         if OfflineState.shared.isOffline {
             OfflineSyncEngine.shared.enqueueDelete(task: task)
             localRepository.deleteTask(task)
-            return Signal(value: nil)
+            return Signal<EmptyResponseProtocol?, Never> { observer, _ in
+                observer.send(value: nil)
+                observer.sendCompleted()
+            }
         }
 
         let call = DeleteTaskCall(task: task)
@@ -391,7 +397,10 @@ class TaskRepository: BaseRepository<TaskLocalRepository> {
 
         if OfflineState.shared.isOffline {
             OfflineSyncEngine.shared.enqueueTag(tag, isNew: true)
-            return Signal(value: tag)
+            return Signal<TagProtocol?, Never> { observer, _ in
+                observer.send(value: tag)
+                observer.sendCompleted()
+            }
         }
 
         let call = CreateTagCall(tag: tag)
@@ -428,7 +437,10 @@ class TaskRepository: BaseRepository<TaskLocalRepository> {
 
         if OfflineState.shared.isOffline {
             OfflineSyncEngine.shared.enqueueTag(tag, isNew: false)
-            return Signal(value: tag)
+            return Signal<TagProtocol?, Never> { observer, _ in
+                observer.send(value: tag)
+                observer.sendCompleted()
+            }
         }
 
         let call = UpdateTagCall(tag: tag)
@@ -451,7 +463,10 @@ class TaskRepository: BaseRepository<TaskLocalRepository> {
         if OfflineState.shared.isOffline {
             OfflineSyncEngine.shared.enqueueDeleteTag(tag)
             localRepository.deleteTag(tag)
-            return Signal(value: nil)
+            return Signal<EmptyResponseProtocol?, Never> { observer, _ in
+                observer.send(value: nil)
+                observer.sendCompleted()
+            }
         }
 
         let call = DeleteTagCall(tag: tag)
@@ -469,7 +484,10 @@ class TaskRepository: BaseRepository<TaskLocalRepository> {
         if OfflineState.shared.isOffline {
             fixTaskOrder(movedTask: task, toPosition: toPosition)
             OfflineSyncEngine.shared.enqueueMove(task: task, toPosition: toPosition)
-            return Signal(value: nil)
+            return Signal<[String]?, Never> { observer, _ in
+                observer.send(value: nil)
+                observer.sendCompleted()
+            }
         }
 
         let call = MoveTaskCall(task: task, toPosition: toPosition)

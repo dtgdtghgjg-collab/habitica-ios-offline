@@ -749,7 +749,13 @@ public class OfflineMutationRepository: BaseLocalRepository {
                             list.append(owned)
                         }
                     default:
-                        // A gear reward lands in the wardrobe.
+                        // Known limitation (documented, not fixed): this branch
+                        // is unreachable. The surrounding `if let itemType =
+                        // ItemType(rawValue:)` matches every case that itemType
+                        // can hold, so a quest reward whose `type` is not an
+                        // `ItemType` raw value (e.g. "gear") is skipped at that
+                        // guard and never reaches the wardrobe. Offline quest
+                        // completion therefore does not grant gear rewards.
                         guard let gear = user.realmItems?.realmGear else {
                             continue
                         }
