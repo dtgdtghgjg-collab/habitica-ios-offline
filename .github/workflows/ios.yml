@@ -14,15 +14,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode 16.2
-        run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+      - name: Select Xcode 16.4
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
 
       - name: Show Xcode version
         run: xcodebuild -version
-
-      - name: Install iOS Simulator Runtime
-        run: |
-          sudo xcodebuild -downloadPlatform iOS
 
       # The app links Habitica_Models, Habitica_Database and Habitica_API_Client,
       # which are separate projects joined only by Habitica.xcworkspace, so the
