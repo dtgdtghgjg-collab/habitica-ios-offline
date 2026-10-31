@@ -13,8 +13,8 @@ import RealmSwift
 class RealmQuestProgressCollect: Object, QuestProgressCollectProtocol {
     @objc dynamic var combinedKey: String?
     @objc dynamic var groupID: String?
-    var key: String?
-    var count: Int = 0
+    @objc dynamic var key: String?
+    @objc dynamic var count: Int = 0
     
     override static func primaryKey() -> String {
         return "combinedKey"

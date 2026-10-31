@@ -26,6 +26,7 @@ class MainTabBarController: UITabBarController {
     private var dueToDosCount = 0
     private var tutorialDailyCount = 0
     private var tutorialToDoCount = 0
+    private var offlineBanner: OfflineStatusBanner?
     
     private var presentedPrivacyPreferencesAt: Date?
     
@@ -71,6 +72,7 @@ class MainTabBarController: UITabBarController {
         super.viewDidLoad()
                 
         fetchData()
+        offlineBanner = OfflineStatusBanner.install(in: self)
         
         #if DEBUG
         let swipe = UISwipeGestureRecognizer(target: self, action: #selector(showDebugMenu))

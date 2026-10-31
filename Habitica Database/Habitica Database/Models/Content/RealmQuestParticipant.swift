@@ -12,10 +12,10 @@ import RealmSwift
 
 class RealmQuestParticipant: Object, QuestParticipantProtocol {
     @objc dynamic var combinedKey: String = ""
-    var userID: String?
-    var groupID: String?
-    var accepted: Bool = false
-    var responded: Bool = false
+    @objc dynamic var userID: String?
+    @objc dynamic var groupID: String?
+    @objc dynamic var accepted: Bool = false
+    @objc dynamic var responded: Bool = false
     
     override static func primaryKey() -> String {
         return "combinedKey"

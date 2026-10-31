@@ -240,6 +240,10 @@ class BuySheetViewModel: ViewModel {
                     }
                 }
         }
+        if OfflineState.shared.isStandalone {
+            offlineBuy(purchaseType: purchaseType, key: key, value: value, quantity: quantity, text: text)
+            return
+        }
         if itemCurrency == .hourglass {
             if purchaseType == "gear" || purchaseType == "mystery_set" {
                 inventoryRepository.purchaseMysterySet(identifier: setIdentifier, text: text)
@@ -288,6 +292,33 @@ class BuySheetViewModel: ViewModel {
         }
     }
     
+    /// Standalone purchase: the repositories write straight into Realm, so the
+    /// sheet only plays the sound and closes.
+    private func offlineBuy(purchaseType: String, key: String, value: Int, quantity: Int, text: String) {
+        if itemCurrency == .gold && purchaseType == "quests" {
+            inventoryRepository.purchaseQuest(key: key, text: text)
+                .observeCompleted {
+                    SoundManager.shared.play(effect: .rewardBought)
+                    onInventoryRefresh?()
+                    dismiss()
+                }
+        } else if itemCurrency == .gem || purchaseType == "gems" {
+            inventoryRepository.purchaseItem(purchaseType: purchaseType, key: key, value: value, quantity: quantity, text: text)
+                .observeCompleted {
+                    SoundManager.shared.play(effect: .rewardBought)
+                    onInventoryRefresh?()
+                    dismiss()
+                }
+        } else {
+            inventoryRepository.buyObject(key: key, quantity: quantity, price: value, text: text)
+                .observeCompleted {
+                    SoundManager.shared.play(effect: .rewardBought)
+                    onInventoryRefresh?()
+                    dismiss()
+                }
+        }
+    }
+
     private func remainingPurchaseQuantity(onResult: @escaping ((Int) -> Void)) {
         var ownedCount = 0
         var shouldWarn = true

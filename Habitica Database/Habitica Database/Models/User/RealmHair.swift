@@ -11,12 +11,12 @@ import Habitica_Models
 import RealmSwift
 
 class RealmHair: Object, HairProtocol {
-    var color: String?
-    var bangs: Int = 0
-    var base: Int = 0
-    var beard: Int = 0
-    var mustache: Int = 0
-    var flower: Int = 0
+    @objc dynamic var color: String?
+    @objc dynamic var bangs: Int = 0
+    @objc dynamic var base: Int = 0
+    @objc dynamic var beard: Int = 0
+    @objc dynamic var mustache: Int = 0
+    @objc dynamic var flower: Int = 0
     
     @objc dynamic var id: String?
     override static func primaryKey() -> String {

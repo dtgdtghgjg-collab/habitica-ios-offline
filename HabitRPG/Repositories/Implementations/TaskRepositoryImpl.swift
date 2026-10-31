@@ -87,78 +87,139 @@ class TaskRepository: BaseRepository<TaskLocalRepository> {
     }
         
     func score(task: TaskProtocol, direction: TaskScoringDirection) -> Signal<TaskResponseProtocol?, Never> {
-            if !task.isValid {
-                return Signal.empty
-            }
-            UIImpactFeedbackGenerator.oneShotImpactOccurred(.light)
-            
-            let scoreCall = ScoreTaskCall(task: task, direction: direction)
-            let scoreSignal = scoreCall.objectSignal
-            
-            let userId = AuthenticationManager.shared.currentUserId ?? ""
-            let statsProducer = localRepository.getUserStats(id: userId)
-                .flatMapError { _ -> SignalProducer<StatsProtocol, Never> in
-                    return SignalProducer.empty
-                }
-            
-            let combinedSignal = scoreSignal.withLatest(from: statsProducer)
-            
-            return combinedSignal.on(value: {[weak self] (taskResponse, stats) in
-                guard let response = taskResponse else {
-                    return
-                }
-                if !task.isValid {
-                    return
-                }
+        if !task.isValid {
+            return Signal.empty
+        }
+        UIImpactFeedbackGenerator.oneShotImpactOccurred(.light)
 
-                let healthDiff = (response.health ?? 0) - stats.health
-                let magicDiff = (response.magic ?? 0) - stats.mana
-                var expDiff = (response.experience ?? 0) - stats.experience
-                if stats.level < (response.level ?? 0) {
-                    let levelUpView = HostingBottomSheetController(rootView: LevelupSheet(), prefersGrabberVisible: false)
-                    levelUpView.show()
-                    SoundManager.shared.play(effect: .levelUp)
-                    
-                    expDiff = stats.toNextLevel - stats.experience + (response.experience ?? 0)
+        // Standalone players never reach the server: scoring is always local.
+        if OfflineState.shared.isStandalone || OfflineState.shared.isOffline {
+            let previousStats = OfflineScoreEngine.shared.currentStats()
+            return OfflineScoreEngine.shared.score(task: task, direction: direction)
+                .on(value: { [weak self] response in
+                    guard let response = response, let previousStats = previousStats else {
+                        return
+                    }
+                    self?.handleScoreResponse(task: task,
+                                              response: response,
+                                              stats: nil,
+                                              previousStats: previousStats,
+                                              direction: direction,
+                                              applyLocalUpdate: false)
+                })
+        }
+
+        let scoreCall = ScoreTaskCall(task: task, direction: direction)
+        let scoreSignal = scoreCall.objectSignal
+
+        // The reachability check can be optimistic; if the request really
+        // failed because the connection is gone, score locally instead of
+        // dropping the user's tap.
+        scoreCall.errorSignal.observeValues { [weak self] error in
+            guard error.isConnectionError else {
+                return
+            }
+            NetworkMonitor.shared.reportConnectionFailure()
+            let previousStats = OfflineScoreEngine.shared.currentStats()
+            OfflineScoreEngine.shared.score(task: task, direction: direction).observeValues { response in
+                guard let response = response, let previousStats = previousStats else {
+                    return
                 }
-                let goldDiff = (response.gold ?? 0) - stats.gold
-                let questDamage = (response.temp?.quest?.progressDelta ?? 0)
-                
-                if let taskId = task.id {
-                    self?.localRepository.update(taskID: taskId, userID: self?.currentUserId ?? "", stats: stats, direction: direction, response: response)
+                self?.handleScoreResponse(task: task,
+                                          response: response,
+                                          stats: nil,
+                                          previousStats: previousStats,
+                                          direction: direction,
+                                          applyLocalUpdate: false)
+            }
+        }
+
+        let userId = AuthenticationManager.shared.currentUserId ?? ""
+        let statsProducer = localRepository.getUserStats(id: userId)
+            .flatMapError { _ -> SignalProducer<StatsProtocol, Never> in
+                return SignalProducer.empty
+            }
+
+        let combinedSignal = scoreSignal.withLatest(from: statsProducer)
+
+        return combinedSignal.on(value: { [weak self] (taskResponse, stats) in
+            guard let response = taskResponse else {
+                return
+            }
+            self?.handleScoreResponse(task: task,
+                                      response: response,
+                                      stats: stats,
+                                      previousStats: OfflineStatsSnapshot(stats: stats),
+                                      direction: direction,
+                                      applyLocalUpdate: true)
+        }).map({ (response, _) in
+            return response
+        })
+    }
+
+    private func handleScoreResponse(task: TaskProtocol,
+                                     response: TaskResponseProtocol,
+                                     stats: StatsProtocol?,
+                                     previousStats: OfflineStatsSnapshot,
+                                     direction: TaskScoringDirection,
+                                     applyLocalUpdate: Bool) {
+        if !task.isValid {
+            return
+        }
+
+        let healthDiff = (response.health ?? 0) - previousStats.health
+        let magicDiff = (response.magic ?? 0) - previousStats.mana
+        var expDiff = (response.experience ?? 0) - previousStats.experience
+        if previousStats.level < (response.level ?? 0) {
+            let levelUpView = HostingBottomSheetController(rootView: LevelupSheet(), prefersGrabberVisible: false)
+            levelUpView.show()
+            SoundManager.shared.play(effect: .levelUp)
+
+            expDiff = previousStats.toNextLevel - previousStats.experience + (response.experience ?? 0)
+        }
+        let goldDiff = (response.gold ?? 0) - previousStats.gold
+        let questDamage = (response.temp?.quest?.progressDelta ?? 0)
+
+        // Offline scoring already wrote the optimistic task value; applying the
+        // server delta on top of it would double count.
+        if applyLocalUpdate, let taskId = task.id, let stats = stats {
+            localRepository.update(taskID: taskId,
+                                   userID: currentUserId ?? "",
+                                   stats: stats,
+                                   direction: direction,
+                                   response: response)
+        }
+        if task.type == "reward" {
+            let formatter = NumberFormatter()
+            formatter.minimumFractionDigits = 0
+            formatter.maximumFractionDigits = 2
+            ToastManager.show(text: L10n.buyReward(task.text ?? "", formatter.string(from: NSNumber(value: task.value)) ?? ""), color: .green)
+        } else if healthDiff + magicDiff + goldDiff + questDamage != 0 && (response.level ?? 0) > 0 {
+            let questDamageToShow: Float = {
+                switch TaskRepository.currentUserQuestStatus {
+                case .questBoss:
+                    return questDamage
+                default:
+                    return 0
                 }
-                if task.type == "reward" {
-                    let formatter = NumberFormatter()
-                    formatter.minimumFractionDigits = 0
-                    formatter.maximumFractionDigits = 2
-                    ToastManager.show(text: L10n.buyReward(task.text ?? "", formatter.string(from: NSNumber(value: task.value)) ?? ""), color: .green)
-                } else if healthDiff + magicDiff + goldDiff + questDamage != 0 && (response.level ?? 0) > 0 {
-                    let questDamageToShow: Float = {
-                        switch TaskRepository.currentUserQuestStatus {
-                        case .questBoss:
-                            return questDamage
-                        default:
-                            return 0
-                        }
-                    }()
-                    
-                    let toastView = ToastView(healthDiff: healthDiff,
-                                              magicDiff: magicDiff,
-                                              expDiff: expDiff,
-                                              goldDiff: goldDiff,
-                                              questDamage: questDamageToShow,
-                                              background: healthDiff >= 0 ? .green : .red)
-                    ToastManager.show(toast: toastView)
-                }
-                if let drop = response.temp?.drop {
-                    ToastManager.show(text: drop.dialog ?? "You found a \(drop.key ?? "")", color: .gray)
-                }
-                if TaskRepository.currentUserQuestStatus == .questCollect, let questItemsFound = response.temp?.quest?.collection, questItemsFound > 0 {
-                    ToastManager.show(text: questItemsFound == 1 ? L10n.oneQuestItemFound : L10n.questItemsFound(questItemsFound), color: .gray)
-                }
-            }).map({ (response, _) in
-                return response
-            })
+            }()
+
+            let toastView = ToastView(healthDiff: healthDiff,
+                                      magicDiff: magicDiff,
+                                      expDiff: expDiff,
+                                      goldDiff: goldDiff,
+                                      questDamage: questDamageToShow,
+                                      background: healthDiff >= 0 ? .green : .red)
+            ToastManager.show(toast: toastView)
+        }
+        if let drop = response.temp?.drop {
+            ToastManager.show(text: drop.dialog ?? "You found a \(drop.key ?? "")", color: .gray)
+        }
+        if TaskRepository.currentUserQuestStatus == .questCollect,
+           let questItemsFound = response.temp?.quest?.collection,
+           questItemsFound > 0 {
+            ToastManager.show(text: questItemsFound == 1 ? L10n.oneQuestItemFound : L10n.questItemsFound(questItemsFound), color: .gray)
+        }
     }
     
     func score(checklistItem: ChecklistItemProtocol, task: TaskProtocol) -> Signal<TaskProtocol?, Never> {
@@ -197,10 +258,21 @@ class TaskRepository: BaseRepository<TaskLocalRepository> {
     
     func createTask(_ task: TaskProtocol) -> Signal<TaskProtocol?, Never> {
         localRepository.save(userID: currentUserId, task: task)
+
+        if OfflineState.shared.isOffline {
+            return saveTaskOffline(task, isNew: true)
+        }
+
         localRepository.setTaskSyncing(userID: currentUserId, task: task, isSyncing: true)
-        
+
         let call = CreateTaskCall(task: task)
-        
+        call.errorSignal.observeValues {[weak self] error in
+            if error.isConnectionError {
+                NetworkMonitor.shared.reportConnectionFailure()
+                self?.saveTaskOffline(task, isNew: true)
+            }
+        }
+
         return call.objectSignal.on(value: {[weak self] returnedTask in
             if let returnedTask = returnedTask {
                 let adjustedTask = returnedTask
@@ -217,6 +289,24 @@ class TaskRepository: BaseRepository<TaskLocalRepository> {
             }
         })
     }
+
+    /// Stores a task locally and queues it for the next successful sync.
+    @discardableResult
+    private func saveTaskOffline(_ task: TaskProtocol, isNew: Bool) -> Signal<TaskProtocol?, Never> {
+        task.isNewTask = isNew
+        task.isSynced = false
+        task.isSyncing = false
+        localRepository.save(userID: currentUserId, task: task)
+        if isNew {
+            OfflineSyncEngine.shared.enqueueCreate(task: task)
+            if let userID = currentUserId {
+                OfflineMutationRepository().applyAchievements(userID: userID, createdTask: true)
+            }
+        } else {
+            OfflineSyncEngine.shared.enqueueUpdate(task: task)
+        }
+        return Signal(value: task)
+    }
     
     func createChallengeTask(challengeID: String, task: TaskProtocol) -> Signal<TaskProtocol?, Never> {
         return CreateChallengeTaskCall(challengeID: challengeID, task: task).objectSignal
@@ -229,12 +319,22 @@ class TaskRepository: BaseRepository<TaskLocalRepository> {
     
     func updateTask(_ task: TaskProtocol) -> Signal<TaskProtocol?, Never> {
         localRepository.save(userID: currentUserId, task: task)
+
+        if OfflineState.shared.isOffline {
+            return saveTaskOffline(task, isNew: task.isNewTask)
+        }
+
         localRepository.setTaskSyncing(userID: currentUserId, task: task, isSyncing: true)
         let call = UpdateTaskCall(task: task)
         
-        call.errorSignal.observeValues({[weak self] _ in
-            self?.localRepository.setTaskSyncing(userID: self?.currentUserId, task: task, isSyncing: false)
-        })
+        call.errorSignal.observeValues {[weak self] error in
+            if error.isConnectionError {
+                NetworkMonitor.shared.reportConnectionFailure()
+                self?.saveTaskOffline(task, isNew: task.isNewTask)
+            } else {
+                self?.localRepository.setTaskSyncing(userID: self?.currentUserId, task: task, isSyncing: false)
+            }
+        }
         return call.objectSignal.on(value: {[weak self]returnedTask in
             if let returnedTask = returnedTask {
                 returnedTask.order = task.order
@@ -256,9 +356,24 @@ class TaskRepository: BaseRepository<TaskLocalRepository> {
         if !task.isValid {
             return Signal.empty
         }
-        
+
+        if OfflineState.shared.isOffline {
+            OfflineSyncEngine.shared.enqueueDelete(task: task)
+            localRepository.deleteTask(task)
+            return Signal(value: nil)
+        }
+
         let call = DeleteTaskCall(task: task)
         
+        call.errorSignal.observeValues {[weak self] error in
+            if error.isConnectionError {
+                NetworkMonitor.shared.reportConnectionFailure()
+                OfflineSyncEngine.shared.enqueueDelete(task: task)
+                if task.isValid {
+                    self?.localRepository.deleteTask(task)
+                }
+            }
+        }
         call.httpResponseSignal.observeValues {[weak self] (response) in
             if response.statusCode == 200, task.isValid {
                 self?.localRepository.deleteTask(task)
@@ -273,10 +388,19 @@ class TaskRepository: BaseRepository<TaskLocalRepository> {
         if localID?.isEmpty == false {
             localRepository.save(userID: currentUserId, tag: tag)
         }
+
+        if OfflineState.shared.isOffline {
+            OfflineSyncEngine.shared.enqueueTag(tag, isNew: true)
+            return Signal(value: tag)
+        }
+
         let call = CreateTagCall(tag: tag)
 
-        call.errorSignal.observeValues {[weak self] _ in
-            if let self = self, let localID = localID, !localID.isEmpty {
+        call.errorSignal.observeValues {[weak self] error in
+            if error.isConnectionError {
+                NetworkMonitor.shared.reportConnectionFailure()
+                OfflineSyncEngine.shared.enqueueTag(tag, isNew: true)
+            } else if let self = self, let localID = localID, !localID.isEmpty {
                 self.localRepository.deleteTag(self.localRepository.getNewTag(id: localID))
             }
         }
@@ -301,8 +425,20 @@ class TaskRepository: BaseRepository<TaskLocalRepository> {
         if !tag.isManaged {
             localRepository.save(userID: currentUserId, tag: tag)
         }
+
+        if OfflineState.shared.isOffline {
+            OfflineSyncEngine.shared.enqueueTag(tag, isNew: false)
+            return Signal(value: tag)
+        }
+
         let call = UpdateTagCall(tag: tag)
 
+        call.errorSignal.observeValues { error in
+            if error.isConnectionError {
+                NetworkMonitor.shared.reportConnectionFailure()
+                OfflineSyncEngine.shared.enqueueTag(tag, isNew: false)
+            }
+        }
         return call.objectSignal.on(value: {[weak self]returnedTag in
             if let returnedTag = returnedTag {
                 returnedTag.order = order
@@ -312,14 +448,39 @@ class TaskRepository: BaseRepository<TaskLocalRepository> {
     }
     
     func deleteTag(_ tag: TagProtocol) -> Signal<EmptyResponseProtocol?, Never> {
+        if OfflineState.shared.isOffline {
+            OfflineSyncEngine.shared.enqueueDeleteTag(tag)
+            localRepository.deleteTag(tag)
+            return Signal(value: nil)
+        }
+
         let call = DeleteTagCall(tag: tag)
+        call.errorSignal.observeValues { error in
+            if error.isConnectionError {
+                NetworkMonitor.shared.reportConnectionFailure()
+                OfflineSyncEngine.shared.enqueueDeleteTag(tag)
+            }
+        }
         localRepository.deleteTag(tag)
         return call.objectSignal
     }
     
     func moveTask(_ task: TaskProtocol, toPosition: Int) -> Signal<[String]?, Never> {
+        if OfflineState.shared.isOffline {
+            fixTaskOrder(movedTask: task, toPosition: toPosition)
+            OfflineSyncEngine.shared.enqueueMove(task: task, toPosition: toPosition)
+            return Signal(value: nil)
+        }
+
         let call = MoveTaskCall(task: task, toPosition: toPosition)
-        
+
+        call.errorSignal.observeValues {[weak self] error in
+            if error.isConnectionError {
+                NetworkMonitor.shared.reportConnectionFailure()
+                self?.fixTaskOrder(movedTask: task, toPosition: toPosition)
+                OfflineSyncEngine.shared.enqueueMove(task: task, toPosition: toPosition)
+            }
+        }
         return call.arraySignal.on(value: {[weak self] taskOrder in
             if let taskType = task.type, let taskOrder = taskOrder {
                 self?.localRepository.updateTaskOrder(taskType: taskType, order: taskOrder)

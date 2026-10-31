@@ -36,6 +36,11 @@
 		292844E520DD16BE0011DC43 /* RealmGroupInvitation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 292844E420DD16BE0011DC43 /* RealmGroupInvitation.swift */; };
 		292DEE66204DCB010086D5F7 /* BaseLocalRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 292DEE65204DCB010086D5F7 /* BaseLocalRepository.swift */; };
 		292DEE68204DCCB40086D5F7 /* TaskLocalRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 292DEE67204DCCB40086D5F7 /* TaskLocalRepository.swift */; };
+		0FF1CE00000000000000D002 /* RealmPendingOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000D001 /* RealmPendingOperation.swift */; };
+		0FF1CE00000000000000D005 /* PendingOperationRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000D004 /* PendingOperationRepository.swift */; };
+		0FF1CE00000000000000D007 /* OfflineMutationRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000D006 /* OfflineMutationRepository.swift */; };
+		0FF1CE00000000000000D00A /* OfflineGameModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000D009 /* OfflineGameModels.swift */; };
+		0FF1CE00000000000000D00C /* OfflineGameContentRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000D00B /* OfflineGameContentRepository.swift */; };
 		292DEE6B204DCF2E0086D5F7 /* RealmTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 292DEE6A204DCF2E0086D5F7 /* RealmTask.swift */; };
 		292DEE6E204DD94E0086D5F7 /* ReactiveRealm.swift in Sources */ = {isa = PBXBuildFile; fileRef = 292DEE6D204DD94E0086D5F7 /* ReactiveRealm.swift */; };
 		292DEE80204E3A000086D5F7 /* RealmTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = 292DEE7F204E3A000086D5F7 /* RealmTag.swift */; };
@@ -149,6 +154,11 @@
 		292844E420DD16BE0011DC43 /* RealmGroupInvitation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RealmGroupInvitation.swift; path = "../../../../Habitica Models/Habitica Models/Group/RealmGroupInvitation.swift"; sourceTree = "<group>"; };
 		292DEE65204DCB010086D5F7 /* BaseLocalRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseLocalRepository.swift; sourceTree = "<group>"; };
 		292DEE67204DCCB40086D5F7 /* TaskLocalRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskLocalRepository.swift; sourceTree = "<group>"; };
+		0FF1CE00000000000000D001 /* RealmPendingOperation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealmPendingOperation.swift; sourceTree = "<group>"; };
+		0FF1CE00000000000000D004 /* PendingOperationRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingOperationRepository.swift; sourceTree = "<group>"; };
+		0FF1CE00000000000000D006 /* OfflineMutationRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineMutationRepository.swift; sourceTree = "<group>"; };
+		0FF1CE00000000000000D009 /* OfflineGameModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineGameModels.swift; sourceTree = "<group>"; };
+		0FF1CE00000000000000D00B /* OfflineGameContentRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineGameContentRepository.swift; sourceTree = "<group>"; };
 		292DEE6A204DCF2E0086D5F7 /* RealmTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealmTask.swift; sourceTree = "<group>"; };
 		292DEE6D204DD94E0086D5F7 /* ReactiveRealm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReactiveRealm.swift; sourceTree = "<group>"; };
 		292DEE7F204E3A000086D5F7 /* RealmTag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealmTag.swift; sourceTree = "<group>"; };
@@ -256,9 +266,27 @@
 				2956110E2056EC0E00D9711A /* Content */,
 				29323E2F2051FA7700AC6D6F /* Tasks */,
 				29323E562052F8B000AC6D6F /* User */,
+				0FF1CE00000000000000D003 /* Sync */,
+				0FF1CE00000000000000D008 /* Offline */,
 				29BD3EB0275903AF003AD251 /* BaseModel.swift */,
 			);
 			path = Models;
+			sourceTree = "<group>";
+		};
+		0FF1CE00000000000000D003 /* Sync */ = {
+			isa = PBXGroup;
+			children = (
+				0FF1CE00000000000000D001 /* RealmPendingOperation.swift */,
+			);
+			path = Sync;
+			sourceTree = "<group>";
+		};
+		0FF1CE00000000000000D008 /* Offline */ = {
+			isa = PBXGroup;
+			children = (
+				0FF1CE00000000000000D009 /* OfflineGameModels.swift */,
+			);
+			path = Offline;
 			sourceTree = "<group>";
 		};
 		292DEE6C204DCFDA0086D5F7 /* Repositories */ = {
@@ -272,6 +300,9 @@
 				290C3047206D47A30066AF5B /* SocialLocalRepository.swift */,
 				292DEE67204DCCB40086D5F7 /* TaskLocalRepository.swift */,
 				29323E1C2050537700AC6D6F /* UserLocalRepository.swift */,
+				0FF1CE00000000000000D004 /* PendingOperationRepository.swift */,
+				0FF1CE00000000000000D006 /* OfflineMutationRepository.swift */,
+				0FF1CE00000000000000D00B /* OfflineGameContentRepository.swift */,
 			);
 			path = Repositories;
 			sourceTree = "<group>";
@@ -590,6 +621,11 @@
 				295611182057C8EB00D9711A /* RealmItem.swift in Sources */,
 				298CB21520AF0B3A006DA349 /* RealmQuestDropItem.swift in Sources */,
 				292DEE68204DCCB40086D5F7 /* TaskLocalRepository.swift in Sources */,
+				0FF1CE00000000000000D002 /* RealmPendingOperation.swift in Sources */,
+				0FF1CE00000000000000D005 /* PendingOperationRepository.swift in Sources */,
+				0FF1CE00000000000000D007 /* OfflineMutationRepository.swift in Sources */,
+				0FF1CE00000000000000D00A /* OfflineGameModels.swift in Sources */,
+				0FF1CE00000000000000D00C /* OfflineGameContentRepository.swift in Sources */,
 				295D430420973A3F00948E7E /* RealmTutorialStep.swift in Sources */,
 				29DBFF0D20D15B0500DF9CF2 /* RealmUserNewMessages.swift in Sources */,
 				292F967820722BB300804151 /* RealmChatMessageReaction.swift in Sources */,

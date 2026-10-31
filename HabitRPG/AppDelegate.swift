@@ -52,6 +52,7 @@ class HabiticaAppDelegate: UIResponder, MessagingDelegate, UIApplicationDelegate
         setupDatabase()
         configureNotifications()
         setupInvalidCredentialsObserver()
+        setupOfflineSupport()
         
         NotificationCenter.default.addObserver(
             forName: Notification.Name("userDidBecomeUnauthorized"),
@@ -214,6 +215,11 @@ class HabiticaAppDelegate: UIResponder, MessagingDelegate, UIApplicationDelegate
         }
     }
     
+    private func setupOfflineSupport() {
+        OfflineSyncEngine.shared.start()
+        OfflineCronEngine.shared.start()
+    }
+
     func setupDatabase() {
         var config = Realm.Configuration.defaultConfiguration
         config.deleteRealmIfMigrationNeeded = true

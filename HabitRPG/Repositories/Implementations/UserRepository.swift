@@ -55,20 +55,74 @@ class UserRepository: BaseRepository<UserLocalRepository> {
     }
     
     func allocate(attributePoint: String) -> Signal<StatsProtocol?, Never> {
+        if OfflineState.shared.isStandalone {
+            Self.allocatePointsLocally(attribute: attributePoint)
+            return Signal(value: localRepository.getUserAsync(currentUserId ?? "")?.stats)
+        }
         return AllocateAttributePointCall(attribute: attributePoint).objectSignal.on(value: {[weak self] stats in
             if let userId = self?.currentUserId, let stats = stats {
                 self?.localRepository.save(userId, stats: stats)
             }
         })
     }
-    
+
     func bulkAllocate(strength: Int, intelligence: Int, constitution: Int, perception: Int) -> Signal<StatsProtocol?, Never> {
+        if OfflineState.shared.isStandalone {
+            Self.allocatePointsLocally(strength: strength,
+                                       intelligence: intelligence,
+                                       constitution: constitution,
+                                       perception: perception)
+            return Signal(value: localRepository.getUserAsync(currentUserId ?? "")?.stats)
+        }
         return BulkAllocateAttributePointsCall(strength: strength, intelligence: intelligence, constitution: constitution, perception: perception)
             .objectSignal.on(value: { stats in
             if let userId = self.currentUserId, let stats = stats {
                 self.localRepository.save(userId, stats: stats)
             }
         })
+    }
+
+    /// Distributes unallocated points locally. The absolute stat values are
+    /// stored, so the caller's deltas are applied to the current Realm values.
+    private static func allocatePointsLocally(strength: Int = 0,
+                                              intelligence: Int = 0,
+                                              constitution: Int = 0,
+                                              perception: Int = 0,
+                                              attribute: String? = nil) {
+        guard let userID = OfflineState.shared.currentUserID else {
+            return
+        }
+        let mutationRepository = OfflineMutationRepository()
+        let userLocalRepository = UserLocalRepository()
+        guard let user = userLocalRepository.getUserAsync(userID),
+              let stats = user.stats else {
+            return
+        }
+        var newStrength = stats.strength + strength
+        var newIntelligence = stats.intelligence + intelligence
+        var newConstitution = stats.constitution + constitution
+        var newPerception = stats.perception + perception
+        switch attribute {
+        case "str":
+            newStrength += 1
+        case "int":
+            newIntelligence += 1
+        case "con":
+            newConstitution += 1
+        case "per":
+            newPerception += 1
+        default:
+            break
+        }
+        let spent = strength + intelligence + constitution + perception
+            + (attribute == nil ? 0 : 1)
+        let remaining = max(0, stats.points - spent)
+        OfflineProfile.shared.allocate(userID: userID,
+                                       strength: newStrength,
+                                       intelligence: newIntelligence,
+                                       constitution: newConstitution,
+                                       perception: newPerception,
+                                       points: remaining)
     }
     
     func hasUserData() -> Bool {
@@ -139,6 +193,13 @@ class UserRepository: BaseRepository<UserLocalRepository> {
             return
         }
 
+        if OfflineState.shared.isOffline {
+            // The local rollover already happened; ask the server to run its
+            // cron as soon as the queue can be replayed.
+            OfflineSyncEngine.shared.enqueueCron()
+            return
+        }
+
         var disposable: Disposable?
         getUser().take(first: 1).on(value: {[weak self]user in
             guard !UserManager.shared.isLoggingOut else {
@@ -184,6 +245,10 @@ class UserRepository: BaseRepository<UserLocalRepository> {
     }
     
     func updateUser(_ updateDict: [String: Encodable?]) -> Signal<UserProtocol?, Never> {
+        if OfflineState.shared.isStandalone {
+            applyUserUpdateLocally(updateDict)
+            return Signal(value: localRepository.getUserAsync(currentUserId ?? ""))
+        }
         return UpdateUserCall(updateDict).objectSignal.on(value: handleUserUpdate())
     }
     
@@ -700,6 +765,77 @@ class UserRepository: BaseRepository<UserLocalRepository> {
             if let userID = self?.currentUserId, let updatedUser = updatedUser {
                 self?.localRepository.updateUser(id: userID, updateUser: updatedUser)
             }
+        }
+    }
+
+    /// Applies the keys the offline code understands to Realm. Any other key
+    /// (flags, push devices, ...) silently keeps its current value; the server
+    /// never sees the update in standalone mode.
+    private func applyUserUpdateLocally(_ updateDict: [String: Encodable?]) {
+        guard let userID = OfflineState.shared.currentUserID else {
+            return
+        }
+        var name: String?
+        var blurb: String?
+        var skin: String?
+        var shirt: String?
+        var size: String?
+        var background: String?
+        var chair: String?
+        var hairColor: String?
+        var hairBase: Int?
+        var hairBangs: Int?
+        var hairBeard: Int?
+        var hairMustache: Int?
+        var hairFlower: Int?
+
+        for (key, value) in updateDict {
+            switch key {
+            case "profile.name":
+                name = value as? String
+            case "profile.blurb":
+                blurb = value as? String
+            case "preferences.skin":
+                skin = value as? String
+            case "preferences.shirt":
+                shirt = value as? String
+            case "preferences.size":
+                size = value as? String
+            case "preferences.background":
+                background = value as? String
+            case "preferences.chair":
+                chair = value as? String
+            case "preferences.hair.color":
+                hairColor = value as? String
+            case "preferences.hair.base":
+                hairBase = value as? Int
+            case "preferences.hair.bangs":
+                hairBangs = value as? Int
+            case "preferences.hair.beard":
+                hairBeard = value as? Int
+            case "preferences.hair.mustache":
+                hairMustache = value as? Int
+            case "preferences.hair.flower":
+                hairFlower = value as? Int
+            default:
+                break
+            }
+        }
+
+        OfflineProfile.shared.updateAvatar(userID: userID,
+                                           skin: skin,
+                                           shirt: shirt,
+                                           size: size,
+                                           background: background,
+                                           chair: chair,
+                                           hairColor: hairColor,
+                                           hairBase: hairBase,
+                                           hairBangs: hairBangs,
+                                           hairBeard: hairBeard,
+                                           hairMustache: hairMustache,
+                                           hairFlower: hairFlower)
+        if name != nil || blurb != nil {
+            OfflineProfile.shared.updateProfile(userID: userID, name: name, blurb: blurb)
         }
     }
 }

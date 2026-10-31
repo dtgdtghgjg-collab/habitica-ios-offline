@@ -14,7 +14,7 @@ class RealmQuestBossRage: Object, QuestBossRageProtocol {
     @objc dynamic var key: String?
     var title: String?
     var rageDescription: String?
-    var value: Int = 0
+    @objc dynamic var value: Int = 0
     
     convenience init(key: String?, protocolObject: QuestBossRageProtocol) {
         self.init()

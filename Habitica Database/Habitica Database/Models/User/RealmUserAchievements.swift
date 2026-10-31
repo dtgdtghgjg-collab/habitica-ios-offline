@@ -49,14 +49,14 @@ class RealmUserAchievements: BaseModel, UserAchievementsProtocol {
         }
     }
     var realmChallenges = List<RealmAchievement>()
-    var streak: Int = 0
-    var createdTask: Bool = false
-    var completedTask: Bool = false
-    var hatchedPet: Bool = false
-    var fedPet: Bool = false
-    var purchasedEquipment: Bool = false
-    var rebirths: Int = 0
-    var rebirthLevel: Int = 0
+    @objc dynamic var streak: Int = 0
+    @objc dynamic var createdTask: Bool = false
+    @objc dynamic var completedTask: Bool = false
+    @objc dynamic var hatchedPet: Bool = false
+    @objc dynamic var fedPet: Bool = false
+    @objc dynamic var purchasedEquipment: Bool = false
+    @objc dynamic var rebirths: Int = 0
+    @objc dynamic var rebirthLevel: Int = 0
 
     override static func primaryKey() -> String {
         return "userID"

@@ -109,6 +109,22 @@
 		2914943C273163AF00DF2153 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2914943B273163AF00DF2153 /* SceneDelegate.swift */; };
 		2919FDD52090CF900096A53B /* InboxMessagesDataSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2919FDD42090CF900096A53B /* InboxMessagesDataSource.swift */; };
 		2919FDDD2091D5370096A53B /* UserManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2919FDDC2091D5370096A53B /* UserManager.swift */; };
+		0FF1CE00000000000000A002 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000A001 /* NetworkMonitor.swift */; };
+		0FF1CE00000000000000A004 /* OfflineState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000A003 /* OfflineState.swift */; };
+		0FF1CE00000000000000A006 /* LocalScoreCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000A005 /* LocalScoreCalculator.swift */; };
+		0FF1CE00000000000000A008 /* OfflineScoreEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000A007 /* OfflineScoreEngine.swift */; };
+		0FF1CE00000000000000A00A /* OfflineCronEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000A009 /* OfflineCronEngine.swift */; };
+		0FF1CE00000000000000A00C /* OfflineSyncEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000A00B /* OfflineSyncEngine.swift */; };
+		0FF1CE00000000000000A00E /* OfflineStatusBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000A00D /* OfflineStatusBanner.swift */; };
+		0FF1CE00000000000000A011 /* LocalRandomizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000A010 /* LocalRandomizer.swift */; };
+		0FF1CE00000000000000A013 /* LocalStatsComputed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000A012 /* LocalStatsComputed.swift */; };
+		0FF1CE00000000000000A015 /* LocalCrit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000A014 /* LocalCrit.swift */; };
+		0FF1CE00000000000000A017 /* LocalDropGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000A016 /* LocalDropGenerator.swift */; };
+		0FF1CE00000000000000A019 /* LocalQuestProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000A018 /* LocalQuestProgress.swift */; };
+		0FF1CE00000000000000A01B /* OfflineEconomyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000A01A /* OfflineEconomyManager.swift */; };
+		0FF1CE00000000000000A01D /* OfflineQuestManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000A01C /* OfflineQuestManager.swift */; };
+		0FF1CE00000000000000A01F /* OfflineProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000A01E /* OfflineProfile.swift */; };
+		0FF1CE00000000000000A021 /* OfflineAchievementManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000A020 /* OfflineAchievementManager.swift */; };
 		2919FDDF2091D87A0096A53B /* FaintViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2919FDDE2091D87A0096A53B /* FaintViewController.swift */; };
 		291A5E6226CD35E800E9CD50 /* TutorialStepsProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 291A5E6126CD35E800E9CD50 /* TutorialStepsProtocol.swift */; };
 		291CE4B6231E828E0001A243 /* UIColor-Habitica.swift in Sources */ = {isa = PBXBuildFile; fileRef = 291CE4B5231E828D0001A243 /* UIColor-Habitica.swift */; };
@@ -859,6 +875,22 @@
 		2914943B273163AF00DF2153 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SceneDelegate.swift; path = Utilities/SceneDelegate.swift; sourceTree = "<group>"; };
 		2919FDD42090CF900096A53B /* InboxMessagesDataSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxMessagesDataSource.swift; sourceTree = "<group>"; };
 		2919FDDC2091D5370096A53B /* UserManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserManager.swift; sourceTree = "<group>"; };
+		0FF1CE00000000000000A001 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
+		0FF1CE00000000000000A003 /* OfflineState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineState.swift; sourceTree = "<group>"; };
+		0FF1CE00000000000000A005 /* LocalScoreCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalScoreCalculator.swift; sourceTree = "<group>"; };
+		0FF1CE00000000000000A010 /* LocalRandomizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalRandomizer.swift; sourceTree = "<group>"; };
+		0FF1CE00000000000000A012 /* LocalStatsComputed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStatsComputed.swift; sourceTree = "<group>"; };
+		0FF1CE00000000000000A014 /* LocalCrit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalCrit.swift; sourceTree = "<group>"; };
+		0FF1CE00000000000000A016 /* LocalDropGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalDropGenerator.swift; sourceTree = "<group>"; };
+		0FF1CE00000000000000A018 /* LocalQuestProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalQuestProgress.swift; sourceTree = "<group>"; };
+				0FF1CE00000000000000A01A /* OfflineEconomyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineEconomyManager.swift; sourceTree = "<group>"; };
+				0FF1CE00000000000000A01C /* OfflineQuestManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineQuestManager.swift; sourceTree = "<group>"; };
+				0FF1CE00000000000000A01E /* OfflineProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineProfile.swift; sourceTree = "<group>"; };
+				0FF1CE00000000000000A020 /* OfflineAchievementManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineAchievementManager.swift; sourceTree = "<group>"; };
+		0FF1CE00000000000000A007 /* OfflineScoreEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineScoreEngine.swift; sourceTree = "<group>"; };
+		0FF1CE00000000000000A009 /* OfflineCronEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCronEngine.swift; sourceTree = "<group>"; };
+		0FF1CE00000000000000A00B /* OfflineSyncEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineSyncEngine.swift; sourceTree = "<group>"; };
+		0FF1CE00000000000000A00D /* OfflineStatusBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineStatusBanner.swift; sourceTree = "<group>"; };
 		2919FDDE2091D87A0096A53B /* FaintViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaintViewController.swift; sourceTree = "<group>"; };
 		291A5E6126CD35E800E9CD50 /* TutorialStepsProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialStepsProtocol.swift; sourceTree = "<group>"; };
 		291CE4B5231E828D0001A243 /* UIColor-Habitica.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIColor-Habitica.swift"; sourceTree = "<group>"; };
@@ -1657,6 +1689,28 @@
 			path = Inventory;
 			sourceTree = "<group>";
 		};
+		0FF1CE00000000000000A00F /* Offline */ = {
+			isa = PBXGroup;
+			children = (
+				0FF1CE00000000000000A001 /* NetworkMonitor.swift */,
+				0FF1CE00000000000000A003 /* OfflineState.swift */,
+				0FF1CE00000000000000A005 /* LocalScoreCalculator.swift */,
+				0FF1CE00000000000000A010 /* LocalRandomizer.swift */,
+				0FF1CE00000000000000A012 /* LocalStatsComputed.swift */,
+				0FF1CE00000000000000A014 /* LocalCrit.swift */,
+				0FF1CE00000000000000A016 /* LocalDropGenerator.swift */,
+				0FF1CE00000000000000A018 /* LocalQuestProgress.swift */,
+				0FF1CE00000000000000A01A /* OfflineEconomyManager.swift */,
+				0FF1CE00000000000000A01C /* OfflineQuestManager.swift */,
+				0FF1CE00000000000000A01E /* OfflineProfile.swift */,
+				0FF1CE00000000000000A020 /* OfflineAchievementManager.swift */,
+				0FF1CE00000000000000A007 /* OfflineScoreEngine.swift */,
+				0FF1CE00000000000000A009 /* OfflineCronEngine.swift */,
+				0FF1CE00000000000000A00B /* OfflineSyncEngine.swift */,
+			);
+			path = Offline;
+			sourceTree = "<group>";
+		};
 		290B62A0207F814D007287C4 /* General */ = {
 			isa = PBXGroup;
 			children = (
@@ -1672,6 +1726,7 @@
 				290C3016206A963D0066AF5B /* MainMenuViewController.swift */,
 				29BEEB2E253EFA7300D456F8 /* MaintenanceViewController.swift */,
 				295BC6E3226F0F9500DDDF1A /* NotificationsTableViewController.swift */,
+				0FF1CE00000000000000A00D /* OfflineStatusBanner.swift */,
 			);
 			path = General;
 			sourceTree = "<group>";
@@ -2856,6 +2911,7 @@
 				29DDAC202E79A74F007EC4CD /* Preview Assets.xcassets */,
 				D9BB45DB1E7AE23E0002AE2E /* Repositories */,
 				D97ED0AB1E6DBB5F006C2A26 /* Interactors */,
+				0FF1CE00000000000000A00F /* Offline */,
 				D95704371E106BF3004F6804 /* Extensions */,
 				D9A63A311E1031FD0083ADC4 /* UI */,
 				D9B5C0EB18D6321400C8D1B7 /* Models */,
@@ -3974,6 +4030,22 @@
 				29323E4920521FD500AC6D6F /* ContributorProtocol-Extensions.swift in Sources */,
 				291448842088E2E000F3A6B5 /* EquipmentViewDataSource.swift in Sources */,
 				2919FDDD2091D5370096A53B /* UserManager.swift in Sources */,
+				0FF1CE00000000000000A002 /* NetworkMonitor.swift in Sources */,
+				0FF1CE00000000000000A004 /* OfflineState.swift in Sources */,
+				0FF1CE00000000000000A006 /* LocalScoreCalculator.swift in Sources */,
+				0FF1CE00000000000000A011 /* LocalRandomizer.swift in Sources */,
+				0FF1CE00000000000000A013 /* LocalStatsComputed.swift in Sources */,
+				0FF1CE00000000000000A015 /* LocalCrit.swift in Sources */,
+				0FF1CE00000000000000A017 /* LocalDropGenerator.swift in Sources */,
+				0FF1CE00000000000000A019 /* LocalQuestProgress.swift in Sources */,
+				0FF1CE00000000000000A01B /* OfflineEconomyManager.swift in Sources */,
+				0FF1CE00000000000000A01D /* OfflineQuestManager.swift in Sources */,
+				0FF1CE00000000000000A01F /* OfflineProfile.swift in Sources */,
+				0FF1CE00000000000000A021 /* OfflineAchievementManager.swift in Sources */,
+				0FF1CE00000000000000A008 /* OfflineScoreEngine.swift in Sources */,
+				0FF1CE00000000000000A00A /* OfflineCronEngine.swift in Sources */,
+				0FF1CE00000000000000A00C /* OfflineSyncEngine.swift in Sources */,
+				0FF1CE00000000000000A00E /* OfflineStatusBanner.swift in Sources */,
 				29ED1AFF1F339ACF005A3895 /* UIColor-Extensions.swift in Sources */,
 				291448662084FBAC00F3A6B5 /* PetDetailCell.swift in Sources */,
 				293282141F389CC000D42961 /* SetupCustomizationItemView.swift in Sources */,

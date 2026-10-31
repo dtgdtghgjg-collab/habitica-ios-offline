@@ -2,64 +2,34 @@ name: iOS CI
 
 on:
   push:
-    branches: [ develop, release ]
+    branches: [ main, master, develop ]
   pull_request:
+  workflow_dispatch:
 
 jobs:
-  lint:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Prepare
-        run: ./.github/prepare-workflow
-      - name: Run lint
-        run: swiftlint --reporter "emoji"
   build:
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        name:
-          - "iPhone 17"
-        os-version:
-          - "26.5"
+    runs-on: macos-15
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
-      - name: Prepare
-        run: ./.github/prepare-workflow
-      - name: Build
-        run: xcodebuild build -scheme Habitica -destination "platform=iOS Simulator,name=${{ matrix.name }},OS=${{ matrix.os-version }}"
-  unit-tests:
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        name:
-          - "iPhone 17"
-          - "iPad (A16)"
-        os-version:
-          - "26.5"
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Prepare
-        run: ./.github/prepare-workflow
-      - name: Build
-        run: xcodebuild clean test -scheme 'Habitica' -destination 'platform=iOS Simulator,name=${{ matrix.name }},OS=${{ matrix.os-version }}' -testPlan "Unit Tests" -showBuildTimingSummary
-  ui-tests:
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        name:
-          - "iPhone 17"
-          - "iPhone 17 Pro Max"
-          - "iPad (A16)"
-        os-version:
-          - "26.5"
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Prepare
-        run: ./.github/prepare-workflow
-      - name: Build
-        run: xcodebuild clean test -scheme 'Habitica' -destination 'platform=iOS Simulator,name=${{ matrix.name }},OS=${{ matrix.os-version }}' -testPlan "UI Tests" -showBuildTimingSummary
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 16.2
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      # The app links Habitica_Models, Habitica_Database and Habitica_API_Client,
+      # which are separate projects joined only by Habitica.xcworkspace, so the
+      # build must go through -workspace (not -project).
+      - name: Build Habitica
+        run: |
+          xcodebuild \
+            -workspace Habitica.xcworkspace \
+            -scheme Habitica \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            build

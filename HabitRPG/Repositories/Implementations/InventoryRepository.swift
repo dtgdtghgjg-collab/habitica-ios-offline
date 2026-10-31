@@ -68,9 +68,14 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
     }
     
     func sell(item: ItemProtocol) -> Signal<UserProtocol?, Never> {
-        let call = SellItemCall(item: item)
         let toastView = ToastView(goldDiff: item.value, background: .green, delay: 0.5)
-        
+        if OfflineState.shared.isStandalone, let userID = OfflineState.shared.currentUserID {
+            OfflineEconomyManager.shared.sellItem(userID: userID, key: item.key ?? "", value: item.value)
+            ToastManager.show(toast: toastView)
+            return Signal(value: nil)
+        }
+        let call = SellItemCall(item: item)
+
         return call.objectSignal.on(value: {[weak self]user in
             ToastManager.show(toast: toastView)
             if let user = user, let userID = self?.currentUserId {
@@ -113,16 +118,24 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
     }
     
     func equip(type: String, key: String) -> Signal<UserItemsProtocol?, Never> {
+        if OfflineState.shared.isStandalone, let userID = OfflineState.shared.currentUserID {
+            OfflineMutationRepository().equip(userID: userID, type: type, key: key)
+            return Signal(value: nil)
+        }
         let call = EquipCall(type: type, itemKey: key)
-        
+
         return call.objectSignal.on(value: {[weak self]userItems in
             if let userItems = userItems, let userID = self?.currentUserId {
                 self?.localUserRepository.updateUser(id: userID, userItems: userItems)
             }
         })
     }
-    
+
     func buyObject(key: String, quantity: Int, price: Int, text: String, openArmoireView: Bool = true) -> Signal<BuyResponseProtocol?, Never> {
+        if OfflineState.shared.isStandalone, let userID = OfflineState.shared.currentUserID {
+            let result = OfflineEconomyManager.shared.buyWithGold(userID: userID, key: key, quantity: quantity)
+            return Self.offlineBuySignal(result: result, text: text, quantity: quantity)
+        }
         let call = BuyObjectCall(key: key, quantity: quantity)
         
         return call.habiticaResponseSignal.on(value: {[weak self]habiticaResponse in
@@ -151,6 +164,15 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
     }
     
     func purchaseItem(purchaseType: String, key: String, value: Int, quantity: Int, text: String) -> Signal<UserProtocol?, Never> {
+        if OfflineState.shared.isStandalone, let userID = OfflineState.shared.currentUserID {
+            let result = OfflineEconomyManager.shared.buyWithGems(userID: userID,
+                                                                  itemType: purchaseType,
+                                                                  key: key,
+                                                                  gemCost: value,
+                                                                  quantity: quantity)
+            Self.showOfflinePurchaseToast(result: result, text: text, quantity: quantity)
+            return Signal(value: nil)
+        }
         let call = PurchaseItemCall(purchaseType: purchaseType, key: key, quantity: quantity)
         
         return call.objectSignal.on(value: {[weak self]updatedUser in
@@ -215,6 +237,11 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
     }
     
     func purchaseQuest(key: String, text: String) -> Signal<UserProtocol?, Never> {
+        if OfflineState.shared.isStandalone, let userID = OfflineState.shared.currentUserID {
+            let result = OfflineEconomyManager.shared.buyWithGold(userID: userID, key: key)
+            Self.showOfflinePurchaseToast(result: result, text: text, quantity: 1)
+            return Signal(value: nil)
+        }
         let call = PurchaseQuestCall(key: key)
         
         return call.objectSignal.on(value: {[weak self]updatedUser in
@@ -327,5 +354,27 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
         return currentUserIDProducer.skipNil().flatMap(.latest, {[weak self] (currentUserID) in
             return self?.localRepository.getArmoireRemainingCount(userID: currentUserID) ?? SignalProducer.empty
         })
+    }
+
+    private static func showOfflinePurchaseToast(result: OfflinePurchaseResult, text: String, quantity: Int) {
+        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1) {
+            if case .success = result {
+                if quantity > 1 {
+                    ToastManager.show(text: L10n.purchasedAmount(quantity, text), color: .green)
+                } else {
+                    ToastManager.show(text: L10n.purchased(text), color: .green)
+                }
+            } else {
+                ToastManager.show(text: L10n.notEnoughGold, color: .red)
+            }
+        }
+    }
+
+    private static func offlineBuySignal(result: OfflinePurchaseResult, text: String, quantity: Int) -> Signal<BuyResponseProtocol?, Never> {
+        showOfflinePurchaseToast(result: result, text: text, quantity: quantity)
+        if case .success = result {
+            UINotificationFeedbackGenerator.oneShotNotificationOccurred(.success)
+        }
+        return Signal(value: nil)
     }
 }

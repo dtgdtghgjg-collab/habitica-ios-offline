@@ -40,6 +40,10 @@ class HabiticaNetworkErrorHandler: NetworkErrorHandler {
     ]
     
     public func handle(error: NetworkError, messages: [String]) {
+        if error.isConnectionError {
+            NetworkMonitor.shared.reportConnectionFailure()
+        }
+
         if error.code == 401,
            !error.url.contains("/user/auth/update-password") {
             let combined = messages.joined(separator: "\n")
