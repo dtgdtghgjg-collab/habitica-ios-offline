@@ -6,6 +6,13 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  # The build log is not downloadable without admin rights, so on failure the
+  # compiler errors are published as an issue, where the public API can read
+  # them back without a token.
+  issues: write
+
 jobs:
   build:
     runs-on: macos-15
@@ -36,7 +43,9 @@ jobs:
       # which are separate projects joined only by Habitica.xcworkspace, so the
       # build must go through -workspace (not -project).
       - name: Build Habitica
+        id: build
         run: |
+          set +e
           xcodebuild \
             -workspace Habitica.xcworkspace \
             -scheme Habitica \
@@ -44,4 +53,35 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build/DerivedData \
             CODE_SIGNING_ALLOWED=NO \
-            build
+            build > build.log 2>&1
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          tail -n 40 build.log
+
+      - name: Publish build errors
+        if: steps.build.outputs.exit_code != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ ! -f build.log ]; then
+            echo "build.log missing" >&2
+            exit 0
+          fi
+          {
+            echo "Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo "Commit: ${GITHUB_SHA}"
+            echo "Exit code: ${{ steps.build.outputs.exit_code }}"
+            echo
+            echo '```'
+            grep -E "(^|[^a-zA-Z])error: " build.log \
+              | sed -E 's#^/Users/runner/work/[^ ]*/##' \
+              | head -n 300 || true
+            echo '```'
+          } > errors.txt
+          cat errors.txt >> "$GITHUB_STEP_SUMMARY"
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/issues" \
+            -f title="CI build errors (run ${GITHUB_RUN_ID})" \
+            -F body=@errors.txt || echo "could not publish issue" >&2
+
+      - name: Fail if build failed
+        if: steps.build.outputs.exit_code != '0'
+        run: exit 1
