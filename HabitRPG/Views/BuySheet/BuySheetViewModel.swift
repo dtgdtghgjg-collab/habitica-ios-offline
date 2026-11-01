@@ -299,22 +299,22 @@ class BuySheetViewModel: ViewModel {
             inventoryRepository.purchaseQuest(key: key, text: text)
                 .observeCompleted {
                     SoundManager.shared.play(effect: .rewardBought)
-                    onInventoryRefresh?()
-                    dismiss()
+                    self.onInventoryRefresh?()
+                    self.dismiss()
                 }
         } else if itemCurrency == .gem || purchaseType == "gems" {
             inventoryRepository.purchaseItem(purchaseType: purchaseType, key: key, value: value, quantity: quantity, text: text)
                 .observeCompleted {
                     SoundManager.shared.play(effect: .rewardBought)
-                    onInventoryRefresh?()
-                    dismiss()
+                    self.onInventoryRefresh?()
+                    self.dismiss()
                 }
         } else {
             inventoryRepository.buyObject(key: key, quantity: quantity, price: value, text: text)
                 .observeCompleted {
                     SoundManager.shared.play(effect: .rewardBought)
-                    onInventoryRefresh?()
-                    dismiss()
+                    self.onInventoryRefresh?()
+                    self.dismiss()
                 }
         }
     }
