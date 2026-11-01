@@ -41,20 +41,28 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
+      # Builds against the *device* SDK so the resulting bundle can run on a
+      # real iPhone, unlike a simulator build. Signing is disabled on purpose:
+      # SideStore re-signs the .ipa on the phone with a free Apple ID, and an
+      # unsigned binary is exactly what it expects. Signing here would require
+      # a paid developer certificate that is not available.
+      #
       # The app links Habitica_Models, Habitica_Database and Habitica_API_Client,
       # which are separate projects joined only by Habitica.xcworkspace, so the
       # build must go through -workspace (not -project).
-      - name: Build Habitica
+      - name: Build Habitica (device, unsigned)
         id: build
         run: |
           set +e
           xcodebuild \
             -workspace Habitica.xcworkspace \
             -scheme Habitica \
-            -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
             -derivedDataPath build/DerivedData \
             CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
             build > build.log 2>&1
           echo "exit_code=$?" >> "$GITHUB_OUTPUT"
           tail -n 40 build.log
@@ -84,10 +92,12 @@ jobs:
             -f title="CI build errors (run ${GITHUB_RUN_ID})" \
             -F body=@errors.txt || echo "could not publish issue" >&2
 
-      # The app is built for the simulator, so this .ipa is a simulator bundle.
-      # It runs in Simulator.app / on a simulator via `xcrun simctl install`, but
-      # it is unsigned and therefore cannot be installed on a physical device.
-      - name: Package .app into .ipa
+      # App extensions (widgets, Siri intents) are removed from the bundle.
+      # A free Apple ID cannot use App Groups, so the extensions could not share
+      # the Realm database with the app anyway, and every .appex needs its own
+      # provisioning profile that SideStore would have to create. Dropping them
+      # keeps the install to a single, self-contained app.
+      - name: Package unsigned .ipa
         if: steps.build.outputs.exit_code == '0'
         run: |
           APP_PATH=$(find build/DerivedData/Build/Products -maxdepth 2 -name "Habitica.app" -type d | head -n 1)
@@ -97,18 +107,32 @@ jobs:
             exit 1
           fi
           echo "Packaging $APP_PATH"
+
+          # An unsigned build carries no _CodeSignature, no embedded profile and
+          # no .xcent, so there is no stale entitlements file to strip; the
+          # extensions are the only thing that has to go.
+          rm -rf "$APP_PATH/PlugIns" "$APP_PATH/Watch"
+          echo "Remaining bundle contents:"
+          ls -1 "$APP_PATH"
+
           mkdir -p Payload
           cp -r "$APP_PATH" Payload/
-          zip -qry Habitica.ipa Payload
+          zip -qry Habitica-device.ipa Payload
           rm -rf Payload
-          ls -lh Habitica.ipa
+          ls -lh Habitica-device.ipa
+
+          echo "CFBundleIdentifier: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP_PATH/Info.plist")"
+          echo "CFBundleVersion:    $(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP_PATH/Info.plist")"
+          echo "MinimumOSVersion:   $(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' "$APP_PATH/Info.plist")"
+          echo "Architectures:"
+          lipo -info "$APP_PATH/Habitica" || true
 
       - name: Upload IPA
         if: steps.build.outputs.exit_code == '0'
         uses: actions/upload-artifact@v4
         with:
-          name: Habitica-ipa
-          path: Habitica.ipa
+          name: Habitica-device-ipa
+          path: Habitica-device.ipa
           if-no-files-found: error
 
       - name: Fail if build failed
