@@ -42,7 +42,7 @@ final class OfflineCronEngine {
 
         disposable.inner.add(NetworkMonitor.shared.isOnline.producer
             .skipRepeats()
-            .observeValues { [weak self] isOnline in
+            .startWithValues { [weak self] isOnline in
                 if !isOnline {
                     self?.runIfNeeded()
                 }

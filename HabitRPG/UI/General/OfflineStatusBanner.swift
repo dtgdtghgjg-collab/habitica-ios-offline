@@ -71,17 +71,17 @@ final class OfflineStatusBanner: UIView, Themeable {
 
         disposable.inner.add(OfflineState.shared.isOnline.producer
             .skipRepeats()
-            .observeValues { [weak self] _ in
+            .startWithValues { [weak self] _ in
                 self?.refresh()
             })
         disposable.inner.add(OfflineState.shared.pendingCount.producer
             .skipRepeats()
-            .observeValues { [weak self] _ in
+            .startWithValues { [weak self] _ in
                 self?.refresh()
             })
         disposable.inner.add(OfflineState.shared.isSyncing.producer
             .skipRepeats()
-            .observeValues { [weak self] _ in
+            .startWithValues { [weak self] _ in
                 self?.refresh()
             })
 

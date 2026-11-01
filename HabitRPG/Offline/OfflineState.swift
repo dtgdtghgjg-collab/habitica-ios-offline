@@ -46,7 +46,7 @@ final class OfflineState {
 
         disposable.inner.add(isOnline.producer
             .skipRepeats()
-            .observeValues { [weak self] _ in
+            .startWithValues { [weak self] _ in
                 self?.refreshPendingCount()
             })
 
@@ -58,7 +58,7 @@ final class OfflineState {
 
         disposable.inner.add(AuthenticationManager.shared.currentUserIDProperty.producer
             .skipRepeats()
-            .observeValues { [weak self] _ in
+            .startWithValues { [weak self] _ in
                 self?.refreshPendingCount()
             })
 

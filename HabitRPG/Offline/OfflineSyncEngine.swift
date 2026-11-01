@@ -59,7 +59,7 @@ final class OfflineSyncEngine {
 
         disposable.inner.add(NetworkMonitor.shared.isOnline.producer
             .skipRepeats()
-            .observeValues { [weak self] isOnline in
+            .startWithValues { [weak self] isOnline in
                 if isOnline {
                     self?.flushIfPossible()
                 }
