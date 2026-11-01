@@ -12,6 +12,8 @@ permissions:
   # compiler errors are published as an issue, where the public API can read
   # them back without a token.
   issues: write
+  # Uploading the .ipa artifact.
+  actions: write
 
 jobs:
   build:
@@ -81,6 +83,33 @@ jobs:
           gh api -X POST "repos/${GITHUB_REPOSITORY}/issues" \
             -f title="CI build errors (run ${GITHUB_RUN_ID})" \
             -F body=@errors.txt || echo "could not publish issue" >&2
+
+      # The app is built for the simulator, so this .ipa is a simulator bundle.
+      # It runs in Simulator.app / on a simulator via `xcrun simctl install`, but
+      # it is unsigned and therefore cannot be installed on a physical device.
+      - name: Package .app into .ipa
+        if: steps.build.outputs.exit_code == '0'
+        run: |
+          APP_PATH=$(find build/DerivedData/Build/Products -maxdepth 2 -name "Habitica.app" -type d | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "Habitica.app not found under build/DerivedData/Build/Products" >&2
+            ls -R build/DerivedData/Build/Products | head -n 50 >&2
+            exit 1
+          fi
+          echo "Packaging $APP_PATH"
+          mkdir -p Payload
+          cp -r "$APP_PATH" Payload/
+          zip -qry Habitica.ipa Payload
+          rm -rf Payload
+          ls -lh Habitica.ipa
+
+      - name: Upload IPA
+        if: steps.build.outputs.exit_code == '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Habitica-ipa
+          path: Habitica.ipa
+          if-no-files-found: error
 
       - name: Fail if build failed
         if: steps.build.outputs.exit_code != '0'
