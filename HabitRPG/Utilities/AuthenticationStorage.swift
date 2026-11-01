@@ -14,7 +14,18 @@ protocol AuthenticationStorage {
 }
 
 class KeychainAuthenticationStorage: AuthenticationStorage {
-    private let localKeychain = Keychain(service: "com.habitrpg.ios.Habitica", accessGroup: "group.habitrpg.habitica")
+    // App Groups are not available on free Apple ID sideloads (SideStore), so
+    // fall back to the app-private keychain when the group container does not
+    // exist. Keeps login persistence working without crashing the build.
+    private static let appGroup = "group.habitrpg.habitica"
+    private static let service = "com.habitrpg.ios.Habitica"
+
+    private let localKeychain: Keychain = {
+        if FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: KeychainAuthenticationStorage.appGroup) != nil {
+            return Keychain(service: KeychainAuthenticationStorage.service, accessGroup: KeychainAuthenticationStorage.appGroup)
+        }
+        return Keychain(service: KeychainAuthenticationStorage.service)
+    }()
 
     private var keychain: Keychain {
         return Keychain(server: "https://habitica.com", protocolType: .https)
