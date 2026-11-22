@@ -14,6 +14,7 @@ final class OfflineState {
     static let shared = OfflineState()
 
     private static let standaloneKey = "offlineStandalone_v1"
+    private static let developerModeKey = "offlineDeveloperMode_v1"
 
     private let pendingRepository = PendingOperationRepository()
     private let disposable = ScopedDisposable(CompositeDisposable())
@@ -34,6 +35,13 @@ final class OfflineState {
             return true
         }
         return UserDefaults.standard.bool(forKey: Self.standaloneKey)
+    }
+
+    /// Developer mode (Settings): shows the Developer section with the
+    /// standalone toggle, privacy reset and content reseed. Off by default.
+    var isDeveloperMode: Bool {
+        get { UserDefaults.standard.bool(forKey: Self.developerModeKey) }
+        set { UserDefaults.standard.set(newValue, forKey: Self.developerModeKey) }
     }
 
     var hasPendingChanges: Bool {

@@ -10,6 +10,7 @@ import UIKit
 import Eureka
 import ReactiveSwift
 import Habitica_Models
+import Habitica_Database
 import SwiftUI
 import UserNotifications
 
@@ -40,6 +41,11 @@ enum SettingsTags {
     static let manuallyRestartDay = "manuallyRestartDay"
     static let pauseDamage = "pauseDamage"
     static let activePromo = "activePromo"
+    static let developerMode = "developerMode"
+    static let developerStandalone = "developerStandalone"
+    static let developerResetPrivacy = "developerResetPrivacy"
+    static let developerReseedContent = "developerReseedContent"
+    static let developerShowInfo = "developerShowInfo"
 }
 
 // swiftlint:disable:next type_body_length
@@ -272,6 +278,60 @@ class SettingsViewController: FormViewController, Themeable {
             }.onCellSelection({[weak self] (_, _) in
                 self?.userRepository.cancelSubscription()
             })
+        form +++ Section("Developer")
+            <<< SwitchRow(SettingsTags.developerMode) { row in
+                row.title = "Developer mode"
+                row.value = OfflineState.shared.isDeveloperMode
+                }.onChange({ [weak self] row in
+                    OfflineState.shared.isDeveloperMode = row.value ?? false
+                    self?.form.rowBy(tag: SettingsTags.developerStandalone)?.evaluateHidden()
+                    self?.form.rowBy(tag: SettingsTags.developerResetPrivacy)?.evaluateHidden()
+                    self?.form.rowBy(tag: SettingsTags.developerReseedContent)?.evaluateHidden()
+                    self?.form.rowBy(tag: SettingsTags.developerShowInfo)?.evaluateHidden()
+                })
+            <<< SwitchRow(SettingsTags.developerStandalone) { row in
+                row.title = "Standalone (offline) mode"
+                row.value = OfflineState.shared.isStandalone
+                row.hidden = Condition.function([SettingsTags.developerMode], { form in
+                    return (form.rowBy(tag: SettingsTags.developerMode) as? SwitchRow)?.value != true
+                })
+                }.onChange({ row in
+                    OfflineState.shared.setStandalone(row.value ?? true)
+                    ToastManager.show(text: "Standalone: \((row.value ?? true) ? "on" : "off") — restart the app to apply", color: .green, duration: 4.0)
+                })
+            <<< ButtonRow(SettingsTags.developerResetPrivacy) { row in
+                row.title = "Reset privacy consent"
+                row.hidden = Condition.function([SettingsTags.developerMode], { form in
+                    return (form.rowBy(tag: SettingsTags.developerMode) as? SwitchRow)?.value != true
+                })
+                }.onCellSelection({ (_, _) in
+                    if let userID = OfflineState.shared.currentUserID {
+                        OfflineMutationRepository().resetAnalyticsConsent(userID: userID)
+                    }
+                    ToastManager.show(text: "Privacy consent reset — the screen will show again on next launch", color: .green, duration: 4.0)
+                })
+            <<< ButtonRow(SettingsTags.developerReseedContent) { row in
+                row.title = "Re-seed bundled content"
+                row.hidden = Condition.function([SettingsTags.developerMode], { form in
+                    return (form.rowBy(tag: SettingsTags.developerMode) as? SwitchRow)?.value != true
+                })
+                }.onCellSelection({[weak self] (_, _) in
+                    OfflineContentSeeder.shared.seedIfNeeded(force: true)
+                    self?.contentRepository.retrieveContent(force: true).observeCompleted {
+                        ToastManager.show(text: "Content re-seeded from bundle", color: .green, duration: 4.0)
+                    }
+                })
+            <<< ButtonRow(SettingsTags.developerShowInfo) { row in
+                row.title = "Show debug info"
+                row.hidden = Condition.function([SettingsTags.developerMode], { form in
+                    return (form.rowBy(tag: SettingsTags.developerMode) as? SwitchRow)?.value != true
+                })
+                }.onCellSelection({ (_, _) in
+                    let info = "User: \(OfflineState.shared.currentUserID ?? "-")\nStandalone: \(OfflineState.shared.isStandalone)\nDeveloper: \(OfflineState.shared.isDeveloperMode)\nPending: \(OfflineState.shared.pendingCount.value)\nConsent given: \(self.user?.preferences?.analyticsConsentGiven ?? false)"
+                    let alertController = HabiticaAlertController(title: "Debug info", message: info)
+                    alertController.addCancelAction()
+                    alertController.show()
+                })
     }
 
     private func setupUserSection() {

@@ -717,6 +717,33 @@ public class OfflineMutationRepository: BaseLocalRepository {
         }
     }
 
+    /// Records the analytics-consent answer locally. The server marks
+    /// `analyticsConsentGiven` when it sees a consent value, so the local
+    /// write does the same — otherwise the privacy screen keeps coming back.
+    public func setAnalyticsConsent(userID: String, consent: Bool) {
+        updateCall { realm in
+            guard let user = realm.object(ofType: RealmUser.self, forPrimaryKey: userID),
+                  let prefs = user.realmPreferences else {
+                return
+            }
+            prefs.analyticsConsent = consent
+            prefs.analyticsConsentGiven = true
+        }
+    }
+
+    /// Clears the consent answer (developer only): the privacy screen
+    /// shows again on the next launch, so the Accept flow can be retested.
+    public func resetAnalyticsConsent(userID: String) {
+        updateCall { realm in
+            guard let user = realm.object(ofType: RealmUser.self, forPrimaryKey: userID),
+                  let prefs = user.realmPreferences else {
+                return
+            }
+            prefs.analyticsConsent = false
+            prefs.analyticsConsentGiven = false
+        }
+    }
+
     /// Sets the start of the Habitica day locally. Used by the standalone
     /// `updateDayStartTime` path; the cron engine reads this value.
     public func updateDayStart(userID: String, dayStart: Int) {

@@ -17,6 +17,12 @@ final class OfflineProfile {
 
     private init() {}
 
+    /// Records the analytics-consent answer locally and marks it as given,
+    /// so the privacy screen does not come back on the next launch.
+    func setAnalyticsConsent(userID: String, consent: Bool) {
+        mutationRepository.setAnalyticsConsent(userID: userID, consent: consent)
+    }
+
     /// Updates the display name and / or the description text.
     func updateProfile(userID: String, name: String?, blurb: String?) {
         mutationRepository.updateProfile(userID: userID, name: name, blurb: blurb)

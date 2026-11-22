@@ -25,12 +25,14 @@ final class OfflineContentSeeder {
 
     private init() {}
 
-    func seedIfNeeded() {
+    func seedIfNeeded(force: Bool = false) {
         guard OfflineState.shared.isStandalone else {
             return
         }
-        guard gameRepository.dropTables().isEmpty else {
-            return
+        if !force {
+            guard gameRepository.dropTables().isEmpty else {
+                return
+            }
         }
         guard let url = Bundle.main.url(forResource: "content", withExtension: "json"),
               let data = try? Data(contentsOf: url),

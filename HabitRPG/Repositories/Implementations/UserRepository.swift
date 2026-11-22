@@ -1056,6 +1056,7 @@ class UserRepository: BaseRepository<UserLocalRepository> {
         var hairBeard: Int?
         var hairMustache: Int?
         var hairFlower: Int?
+        var analyticsConsent: Bool?
 
         for (key, value) in updateDict {
             switch key {
@@ -1085,6 +1086,8 @@ class UserRepository: BaseRepository<UserLocalRepository> {
                 hairMustache = value as? Int
             case "preferences.hair.flower":
                 hairFlower = value as? Int
+            case "preferences.analyticsConsent":
+                analyticsConsent = value as? Bool
             default:
                 break
             }
@@ -1104,6 +1107,9 @@ class UserRepository: BaseRepository<UserLocalRepository> {
                                            hairFlower: hairFlower)
         if name != nil || blurb != nil {
             OfflineProfile.shared.updateProfile(userID: userID, name: name, blurb: blurb)
+        }
+        if let analyticsConsent = analyticsConsent {
+            OfflineProfile.shared.setAnalyticsConsent(userID: userID, consent: analyticsConsent)
         }
     }
 }
