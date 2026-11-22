@@ -11,6 +11,7 @@ import ReactiveSwift
 import Habitica_Models
 import Habitica_API_Client
 import Habitica_Database
+import RealmSwift
 
 enum UserQuestStatus {
     case noQuest
