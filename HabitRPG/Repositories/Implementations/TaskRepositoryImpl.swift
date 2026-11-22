@@ -275,10 +275,10 @@ class TaskRepository: BaseRepository<TaskLocalRepository> {
 
         return call.objectSignal.on(value: {[weak self] returnedTask in
             if let returnedTask = returnedTask {
-                let adjustedTask = returnedTask
-                adjustedTask.isNewTask = false
-                adjustedTask.isSynced = true
-                
+                // The server answer is persisted straight from the network
+                // payload, but the flags below are still Realm writes.
+                Self.markTaskSynced(returnedTask)
+
                 self?.localRepository.save(userID: self?.currentUserId, task: returnedTask)
             }
             
@@ -293,9 +293,9 @@ class TaskRepository: BaseRepository<TaskLocalRepository> {
     /// Stores a task locally and queues it for the next successful sync.
     @discardableResult
     private func saveTaskOffline(_ task: TaskProtocol, isNew: Bool) -> Signal<TaskProtocol?, Never> {
-        task.isNewTask = isNew
-        task.isSynced = false
-        task.isSyncing = false
+        // `task` is usually the Realm object the form just built, so touching
+        // its properties is a Realm write and must happen inside a transaction.
+        Self.markTaskForSync(task, isNew: isNew)
         localRepository.save(userID: currentUserId, task: task)
         if isNew {
             OfflineSyncEngine.shared.enqueueCreate(task: task)
@@ -310,7 +310,46 @@ class TaskRepository: BaseRepository<TaskLocalRepository> {
             observer.sendCompleted()
         }
     }
-    
+
+    /// Sets the sync flags on a task.
+    ///
+    /// Writing to a Realm-managed object outside a write transaction throws
+    /// "Attempting to modify object outside of a write transaction", so the
+    /// flags are applied inside one. Objects that are not managed yet (a fresh
+    /// task built from the form) are written directly: Realm persists their
+    /// values when they are added.
+    private static func markTaskForSync(_ task: TaskProtocol, isNew: Bool) {
+        applyRealmFlags(to: task) {
+            task.isNewTask = isNew
+            task.isSynced = false
+            task.isSyncing = false
+        }
+    }
+
+    /// Marks a task the server has accepted as created and synced.
+    private static func markTaskSynced(_ task: TaskProtocol) {
+        applyRealmFlags(to: task) {
+            task.isNewTask = false
+            task.isSynced = true
+        }
+    }
+
+    /// Runs `apply` inside a write transaction when `task` is managed by Realm,
+    /// and directly otherwise.
+    private static func applyRealmFlags(to task: TaskProtocol, _ apply: () -> Void) {
+        guard let object = task as? Object, let realm = object.realm else {
+            apply()
+            return
+        }
+        if realm.isInWriteTransaction {
+            apply()
+            return
+        }
+        try? realm.write {
+            apply()
+        }
+    }
+
     func createChallengeTask(challengeID: String, task: TaskProtocol) -> Signal<TaskProtocol?, Never> {
         return CreateChallengeTaskCall(challengeID: challengeID, task: task).objectSignal
     }
@@ -340,7 +379,11 @@ class TaskRepository: BaseRepository<TaskLocalRepository> {
         }
         return call.objectSignal.on(value: {[weak self]returnedTask in
             if let returnedTask = returnedTask {
-                returnedTask.order = task.order
+                // `returnedTask` may be a managed object; `order` is then a
+                // Realm write and has to happen inside a transaction.
+                Self.applyRealmFlags(to: returnedTask) {
+                    returnedTask.order = task.order
+                }
                 self?.localRepository.save(userID: self?.currentUserId, task: returnedTask)
             }
         })

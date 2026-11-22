@@ -40,7 +40,7 @@ class HabiticaAppDelegate: UIResponder, MessagingDelegate, UIApplicationDelegate
         logger = RemoteLogger()
         self.application = application
         
-        if !isBeingTested {
+        if !isBeingTested && !OfflineState.shared.isStandalone {
             setupLogging()
             setupAnalytics()
             setupPurchaseHandling()
@@ -50,6 +50,10 @@ class HabiticaAppDelegate: UIResponder, MessagingDelegate, UIApplicationDelegate
         handleLaunchArgs()
         setupNetworkClient()
         setupDatabase()
+        if OfflineState.shared.isStandalone {
+            OfflineContentSeeder.shared.seedIfNeeded()
+            OfflineLocalUser.shared.ensureLocalUser()
+        }
         configureNotifications()
         setupInvalidCredentialsObserver()
         setupOfflineSupport()

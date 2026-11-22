@@ -125,6 +125,9 @@
 		0FF1CE00000000000000A01D /* OfflineQuestManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000A01C /* OfflineQuestManager.swift */; };
 		0FF1CE00000000000000A01F /* OfflineProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000A01E /* OfflineProfile.swift */; };
 		0FF1CE00000000000000A021 /* OfflineAchievementManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000A020 /* OfflineAchievementManager.swift */; };
+		0FF1CE00000000000000A023 /* OfflineContentSeeder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000A022 /* OfflineContentSeeder.swift */; };
+		0FF1CE00000000000000A025 /* OfflineLocalUser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000A024 /* OfflineLocalUser.swift */; };
+		0FF1CE00000000000000A027 /* content.json in Resources */ = {isa = PBXBuildFile; fileRef = 0FF1CE00000000000000A026 /* content.json */; };
 		2919FDDF2091D87A0096A53B /* FaintViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2919FDDE2091D87A0096A53B /* FaintViewController.swift */; };
 		291A5E6226CD35E800E9CD50 /* TutorialStepsProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 291A5E6126CD35E800E9CD50 /* TutorialStepsProtocol.swift */; };
 		291CE4B6231E828E0001A243 /* UIColor-Habitica.swift in Sources */ = {isa = PBXBuildFile; fileRef = 291CE4B5231E828D0001A243 /* UIColor-Habitica.swift */; };
@@ -887,6 +890,9 @@
 				0FF1CE00000000000000A01C /* OfflineQuestManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineQuestManager.swift; sourceTree = "<group>"; };
 				0FF1CE00000000000000A01E /* OfflineProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineProfile.swift; sourceTree = "<group>"; };
 				0FF1CE00000000000000A020 /* OfflineAchievementManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineAchievementManager.swift; sourceTree = "<group>"; };
+		0FF1CE00000000000000A022 /* OfflineContentSeeder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineContentSeeder.swift; sourceTree = "<group>"; };
+		0FF1CE00000000000000A024 /* OfflineLocalUser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineLocalUser.swift; sourceTree = "<group>"; };
+		0FF1CE00000000000000A026 /* content.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = content.json; sourceTree = "<group>"; };
 		0FF1CE00000000000000A007 /* OfflineScoreEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineScoreEngine.swift; sourceTree = "<group>"; };
 		0FF1CE00000000000000A009 /* OfflineCronEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCronEngine.swift; sourceTree = "<group>"; };
 		0FF1CE00000000000000A00B /* OfflineSyncEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineSyncEngine.swift; sourceTree = "<group>"; };
@@ -1704,6 +1710,8 @@
 				0FF1CE00000000000000A01C /* OfflineQuestManager.swift */,
 				0FF1CE00000000000000A01E /* OfflineProfile.swift */,
 				0FF1CE00000000000000A020 /* OfflineAchievementManager.swift */,
+				0FF1CE00000000000000A022 /* OfflineContentSeeder.swift */,
+				0FF1CE00000000000000A024 /* OfflineLocalUser.swift */,
 				0FF1CE00000000000000A007 /* OfflineScoreEngine.swift */,
 				0FF1CE00000000000000A009 /* OfflineCronEngine.swift */,
 				0FF1CE00000000000000A00B /* OfflineSyncEngine.swift */,
@@ -2912,6 +2920,7 @@
 				D9BB45DB1E7AE23E0002AE2E /* Repositories */,
 				D97ED0AB1E6DBB5F006C2A26 /* Interactors */,
 				0FF1CE00000000000000A00F /* Offline */,
+				0FF1CE00000000000000A026 /* content.json */,
 				D95704371E106BF3004F6804 /* Extensions */,
 				D9A63A311E1031FD0083ADC4 /* UI */,
 				D9B5C0EB18D6321400C8D1B7 /* Models */,
@@ -3352,6 +3361,7 @@
 				29DDAC222E79A9F3007EC4CD /* Preview Assets.xcassets in Resources */,
 				2902799D20583ECA006DACB9 /* User.storyboard in Resources */,
 				D9EB4EAD18CB4A9400BB2094 /* Images.xcassets in Resources */,
+				0FF1CE00000000000000A027 /* content.json in Resources */,
 				D942B5381CAAE6B1009AB756 /* Social.storyboard in Resources */,
 				298FAB0224BF5BF30084CB0D /* MainTableviewCell.xib in Resources */,
 				29B3FEBE1F9E3DC3000B12CF /* HabiticaAlertController.xib in Resources */,
@@ -4042,6 +4052,8 @@
 				0FF1CE00000000000000A01D /* OfflineQuestManager.swift in Sources */,
 				0FF1CE00000000000000A01F /* OfflineProfile.swift in Sources */,
 				0FF1CE00000000000000A021 /* OfflineAchievementManager.swift in Sources */,
+				0FF1CE00000000000000A023 /* OfflineContentSeeder.swift in Sources */,
+				0FF1CE00000000000000A025 /* OfflineLocalUser.swift in Sources */,
 				0FF1CE00000000000000A008 /* OfflineScoreEngine.swift in Sources */,
 				0FF1CE00000000000000A00A /* OfflineCronEngine.swift in Sources */,
 				0FF1CE00000000000000A00C /* OfflineSyncEngine.swift in Sources */,

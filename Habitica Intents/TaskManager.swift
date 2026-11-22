@@ -32,6 +32,12 @@ class TaskManager: BaseRepository<TaskLocalRepository> {
     
     private let userLocalRepository = UserLocalRepository()
 
+    /// Standalone is the default for the offline build. The app target owns
+    /// OfflineState, so the intent extension reads the same UserDefaults key.
+    private var isStandalone: Bool {
+        UserDefaults.standard.object(forKey: "offlineStandalone_v1") as? Bool ?? true
+    }
+
     override init() {
         self.possibleTaskLists = self.listSpokenPhraseMap.keys.map {
             return INTaskList(title: INSpeakableString(spokenPhrase: $0 != "todo" ? $0 : "to do"),
@@ -55,6 +61,9 @@ class TaskManager: BaseRepository<TaskLocalRepository> {
 
     @objc
     func setupNetworkClient() {
+        if isStandalone {
+            return
+        }
         NetworkAuthenticationManager.shared.currentUserId = AuthenticationManager.shared.currentUserId
         NetworkAuthenticationManager.shared.currentUserKey = AuthenticationManager.shared.currentUserKey
         updateServer()
@@ -92,6 +101,9 @@ class TaskManager: BaseRepository<TaskLocalRepository> {
     }
 
     func retrieveTasks(dueOnDay: Date? = nil, type: String? = "todo") -> Signal<[TaskProtocol]?, Never> {
+        if isStandalone {
+            return Signal.empty
+        }
         let call = RetrieveTasksCall(dueOnDay: dueOnDay, type: type)
         return call.arraySignal.on(value: {[weak self] tasks in
             if let tasks = tasks, dueOnDay == nil {
@@ -143,6 +155,12 @@ class TaskManager: BaseRepository<TaskLocalRepository> {
         task.startDate = Date()
         // actually add the task and start it syncing with server
         localRepository.save(userID: currentUserId, task: task)
+        if isStandalone {
+            return Signal<TaskProtocol?, Never> { observer, _ in
+                observer.send(value: task)
+                observer.sendCompleted()
+            }
+        }
         localRepository.setTaskSyncing(userID: currentUserId, task: task, isSyncing: true)
         let call = CreateTaskCall(task: task)
         return call.objectSignal.on(value: {[weak self]returnedTask in
@@ -159,6 +177,12 @@ class TaskManager: BaseRepository<TaskLocalRepository> {
     }
 
     func retrieveUser() -> Signal<UserProtocol?, Never> {
+        if isStandalone {
+            return Signal<UserProtocol?, Never> { observer, _ in
+                observer.send(value: self.userLocalRepository.getUserAsync(self.currentUserId ?? ""))
+                observer.sendCompleted()
+            }
+        }
         let call = RetrieveUserCall()
         return call.objectSignal.on(value: {[weak self] user in
             if let user = user {

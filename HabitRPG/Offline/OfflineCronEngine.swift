@@ -55,7 +55,7 @@ final class OfflineCronEngine {
 
     /// Call on launch, on foreground and when connectivity drops.
     func runIfNeeded() {
-        guard OfflineState.shared.isOffline,
+        guard OfflineState.shared.isOffline || OfflineState.shared.isStandalone,
               let userID = OfflineState.shared.currentUserID,
               let user = userLocalRepository.getUserAsync(userID),
               let stats = user.stats else {
@@ -91,7 +91,9 @@ final class OfflineCronEngine {
         }
 
         mutationRepository.resetDailiesForNewDay(userID: userID)
-        OfflineSyncEngine.shared.enqueueCron()
+        if !OfflineState.shared.isStandalone {
+            OfflineSyncEngine.shared.enqueueCron()
+        }
 
         defaults.set(now, forKey: lastCronKey)
     }

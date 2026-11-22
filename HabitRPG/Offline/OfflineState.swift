@@ -30,6 +30,9 @@ final class OfflineState {
     /// When enabled the app never sends a write to the server and never lets a
     /// server response overwrite Realm. Realm is the single source of truth.
     var isStandalone: Bool {
+        if UserDefaults.standard.object(forKey: Self.standaloneKey) == nil {
+            return true
+        }
         return UserDefaults.standard.bool(forKey: Self.standaloneKey)
     }
 

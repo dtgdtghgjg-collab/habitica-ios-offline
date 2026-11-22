@@ -92,7 +92,32 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
     }
     
     func hatchPet(egg: String?, potion: String?) -> Signal<UserItemsProtocol?, Never> {
-        let call = HatchPetCall(egg: egg ?? "", potion: potion ?? "")
+        if OfflineState.shared.isStandalone || OfflineState.shared.isOffline,
+           let userID = OfflineState.shared.currentUserID,
+           let egg = egg, let potion = potion {
+            OfflineMutationRepository().hatchPet(userID: userID, egg: egg, potion: potion)
+            if !OfflineState.shared.isStandalone {
+                OfflineSyncEngine.shared.enqueueHatch(egg: egg, potion: potion)
+            }
+            StableRepository().getPets(keys: ["\(egg)-\(potion)"])
+                .take(first: 1)
+                .map({ result in
+                    return result.value.first
+                })
+                .skipNil()
+                .on(value: { pet in
+                    let sheet = PetHatchedSheet(pet: pet) {
+                        self.equip(type: "pet", key: pet.key ?? "").observeCompleted {}
+                    }
+                    let viewController = HostingBottomSheetController(rootView: sheet, prefersGrabberVisible: false)
+                    viewController.show()
+                }).start()
+            return Signal<UserItemsProtocol?, Never> { observer, _ in
+                observer.send(value: nil)
+                observer.sendCompleted()
+            }
+        }
+       let call = HatchPetCall(egg: egg ?? "", potion: potion ?? "")
         
         return call.objectSignal.on(value: { userItems in
             if let userItems = userItems, let userID = self.currentUserId {
@@ -121,8 +146,11 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
     }
     
     func equip(type: String, key: String) -> Signal<UserItemsProtocol?, Never> {
-        if OfflineState.shared.isStandalone, let userID = OfflineState.shared.currentUserID {
+        if OfflineState.shared.isStandalone || OfflineState.shared.isOffline, let userID = OfflineState.shared.currentUserID {
             OfflineMutationRepository().equip(userID: userID, type: type, key: key)
+            if !OfflineState.shared.isStandalone {
+                OfflineSyncEngine.shared.enqueueEquip(type: type, key: key)
+            }
             return Signal<UserItemsProtocol?, Never> { observer, _ in
                 observer.send(value: nil)
                 observer.sendCompleted()
@@ -138,8 +166,11 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
     }
 
     func buyObject(key: String, quantity: Int, price: Int, text: String, openArmoireView: Bool = true) -> Signal<BuyResponseProtocol?, Never> {
-        if OfflineState.shared.isStandalone, let userID = OfflineState.shared.currentUserID {
+        if OfflineState.shared.isStandalone || OfflineState.shared.isOffline, let userID = OfflineState.shared.currentUserID {
             let result = OfflineEconomyManager.shared.buyWithGold(userID: userID, key: key, quantity: quantity)
+            if case .success = result, !OfflineState.shared.isStandalone {
+                OfflineSyncEngine.shared.enqueueBuy(key: key, quantity: quantity)
+            }
             return Self.offlineBuySignal(result: result, text: text, quantity: quantity)
         }
         let call = BuyObjectCall(key: key, quantity: quantity)
@@ -170,12 +201,15 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
     }
     
     func purchaseItem(purchaseType: String, key: String, value: Int, quantity: Int, text: String) -> Signal<UserProtocol?, Never> {
-        if OfflineState.shared.isStandalone, let userID = OfflineState.shared.currentUserID {
+        if OfflineState.shared.isStandalone || OfflineState.shared.isOffline, let userID = OfflineState.shared.currentUserID {
             let result = OfflineEconomyManager.shared.buyWithGems(userID: userID,
                                                                   itemType: purchaseType,
                                                                   key: key,
                                                                   gemCost: value,
                                                                   quantity: quantity)
+            if case .success = result, !OfflineState.shared.isStandalone {
+                OfflineSyncEngine.shared.enqueuePurchase(purchaseType: purchaseType, key: key, quantity: quantity, value: value)
+            }
             Self.showOfflinePurchaseToast(result: result, text: text, quantity: quantity)
             return Signal<UserProtocol?, Never> { observer, _ in
                 observer.send(value: nil)
@@ -246,8 +280,11 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
     }
     
     func purchaseQuest(key: String, text: String) -> Signal<UserProtocol?, Never> {
-        if OfflineState.shared.isStandalone, let userID = OfflineState.shared.currentUserID {
+        if OfflineState.shared.isStandalone || OfflineState.shared.isOffline, let userID = OfflineState.shared.currentUserID {
             let result = OfflineEconomyManager.shared.buyWithGold(userID: userID, key: key)
+            if case .success = result, !OfflineState.shared.isStandalone {
+                OfflineSyncEngine.shared.enqueuePurchaseQuest(key: key)
+            }
             Self.showOfflinePurchaseToast(result: result, text: text, quantity: 1)
             return Signal<UserProtocol?, Never> { observer, _ in
                 observer.send(value: nil)
@@ -311,7 +348,24 @@ class InventoryRepository: BaseRepository<InventoryLocalRepository> {
     }
     
     func feed(pet: PetProtocol, food: String) -> Signal<HabiticaResponse<Int>?, Never> {
-        let call = FeedPetCall(pet: pet.key ?? "", food: food)
+        if OfflineState.shared.isStandalone || OfflineState.shared.isOffline, let userID = OfflineState.shared.currentUserID {
+            OfflineMutationRepository().feedPet(userID: userID, petKey: pet.key ?? "", food: food)
+            if !OfflineState.shared.isStandalone {
+                OfflineSyncEngine.shared.enqueueFeed(pet: pet.key ?? "", food: food)
+            }
+            if food == "Saddle" {
+                let sheet = MountRaisedSheet(mount: pet) {
+                    self.equip(type: "mount", key: pet.key ?? "").observeCompleted {}
+                }
+                let viewController = HostingBottomSheetController(rootView: sheet, prefersGrabberVisible: false)
+                viewController.show()
+            }
+            return Signal<HabiticaResponse<Int>?, Never> { observer, _ in
+                observer.send(value: nil)
+                observer.sendCompleted()
+            }
+        }
+       let call = FeedPetCall(pet: pet.key ?? "", food: food)
         
         if food == "Saddle" {
             call.httpResponseSignal.observeValues { response in

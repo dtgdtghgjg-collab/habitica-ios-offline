@@ -7,6 +7,7 @@
 
 import Foundation
 import UIKit
+import RealmSwift
 import ReactiveSwift
 import Habitica_Models
 import Habitica_API_Client
@@ -111,7 +112,8 @@ final class OfflineSyncEngine {
     }
 
     func enqueueCron() {
-        guard let userID = OfflineState.shared.currentUserID else {
+        guard !OfflineState.shared.isStandalone,
+              let userID = OfflineState.shared.currentUserID else {
             return
         }
         pendingRepository.enqueue(type: .runCron, userID: userID)
@@ -132,6 +134,54 @@ final class OfflineSyncEngine {
             return
         }
         pendingRepository.enqueue(type: .deleteTag, userID: userID, entityID: tag.id)
+        OfflineState.shared.refreshPendingCount()
+    }
+
+    func enqueueBuy(key: String, quantity: Int) {
+        guard let userID = OfflineState.shared.currentUserID else {
+            return
+        }
+        pendingRepository.enqueue(type: .buyItem, userID: userID, entityID: key, payload: ["quantity": String(quantity)])
+        OfflineState.shared.refreshPendingCount()
+    }
+
+    func enqueueEquip(type: String, key: String) {
+        guard let userID = OfflineState.shared.currentUserID else {
+            return
+        }
+        pendingRepository.enqueue(type: .equip, userID: userID, entityID: key, payload: ["equipType": type])
+        OfflineState.shared.refreshPendingCount()
+    }
+
+    func enqueueHatch(egg: String, potion: String) {
+        guard let userID = OfflineState.shared.currentUserID else {
+            return
+        }
+        pendingRepository.enqueue(type: .hatchPet, userID: userID, entityID: "\(egg)-\(potion)", payload: ["egg": egg, "potion": potion])
+        OfflineState.shared.refreshPendingCount()
+    }
+
+    func enqueueFeed(pet: String, food: String) {
+        guard let userID = OfflineState.shared.currentUserID else {
+            return
+        }
+        pendingRepository.enqueue(type: .feedPet, userID: userID, entityID: pet, payload: ["food": food])
+        OfflineState.shared.refreshPendingCount()
+    }
+
+    func enqueuePurchase(purchaseType: String, key: String, quantity: Int, value: Int) {
+        guard let userID = OfflineState.shared.currentUserID else {
+            return
+        }
+        pendingRepository.enqueue(type: .purchaseItem, userID: userID, entityID: key, payload: ["purchaseType": purchaseType, "quantity": String(quantity), "value": String(value)])
+        OfflineState.shared.refreshPendingCount()
+    }
+
+    func enqueuePurchaseQuest(key: String) {
+        guard let userID = OfflineState.shared.currentUserID else {
+            return
+        }
+        pendingRepository.enqueue(type: .purchaseQuest, userID: userID, entityID: key)
         OfflineState.shared.refreshPendingCount()
     }
 
@@ -257,6 +307,18 @@ final class OfflineSyncEngine {
             replayDeleteTag(operation, completion: finish(completion, restoreHandler))
         case .runCron:
             replayCron(completion: finish(completion, restoreHandler))
+        case .buyItem:
+            replayBuy(operation, completion: finish(completion, restoreHandler))
+        case .equip:
+            replayEquip(operation, completion: finish(completion, restoreHandler))
+        case .hatchPet:
+            replayHatch(operation, completion: finish(completion, restoreHandler))
+        case .feedPet:
+            replayFeed(operation, completion: finish(completion, restoreHandler))
+        case .purchaseItem:
+            replayPurchase(operation, completion: finish(completion, restoreHandler))
+        case .purchaseQuest:
+            replayPurchaseQuest(operation, completion: finish(completion, restoreHandler))
         case .scoreChecklist:
             // Checklist scoring is folded into an updateTask when offline.
             restoreHandler()
@@ -297,8 +359,7 @@ final class OfflineSyncEngine {
 
         observeObjectCall(call) { [weak self] result, returnedTask in
             if case .success = result, let returnedTask = returnedTask {
-                returnedTask.isNewTask = false
-                returnedTask.isSynced = true
+                Self.markTaskSynced(returnedTask)
                 if let returnedID = returnedTask.id, returnedID != taskID {
                     // The server assigned its own id: drop the local row and
                     // retarget anything still queued for it.
@@ -420,6 +481,75 @@ final class OfflineSyncEngine {
         observeEmptyCall(RunCronCall(), completion: completion)
     }
 
+    private func replayBuy(_ operation: PendingOperationSnapshot, completion: @escaping (ReplayResult) -> Void) {
+        guard let key = operation.entityID,
+              let quantity = Int(operation.payload["quantity"] ?? "1") else {
+            completion(.success)
+            return
+        }
+        let call = BuyObjectCall(key: key, quantity: quantity)
+        observeObjectCall(call) { result, _ in
+            completion(result)
+        }
+    }
+
+    private func replayEquip(_ operation: PendingOperationSnapshot, completion: @escaping (ReplayResult) -> Void) {
+        guard let key = operation.entityID else {
+            completion(.success)
+            return
+        }
+        let call = EquipCall(type: operation.payload["equipType"] ?? "", itemKey: key)
+        observeObjectCall(call) { result, _ in
+            completion(result)
+        }
+    }
+
+    private func replayHatch(_ operation: PendingOperationSnapshot, completion: @escaping (ReplayResult) -> Void) {
+        guard let egg = operation.payload["egg"], let potion = operation.payload["potion"] else {
+            completion(.success)
+            return
+        }
+        let call = HatchPetCall(egg: egg, potion: potion)
+        observeObjectCall(call) { result, _ in
+            completion(result)
+        }
+    }
+
+    private func replayFeed(_ operation: PendingOperationSnapshot, completion: @escaping (ReplayResult) -> Void) {
+        guard let pet = operation.entityID, let food = operation.payload["food"] else {
+            completion(.success)
+            return
+        }
+        let call = FeedPetCall(pet: pet, food: food)
+        observeObjectCall(call) { result, _ in
+            completion(result)
+        }
+    }
+
+    private func replayPurchase(_ operation: PendingOperationSnapshot, completion: @escaping (ReplayResult) -> Void) {
+        guard let key = operation.entityID,
+              let purchaseType = operation.payload["purchaseType"],
+              let quantity = Int(operation.payload["quantity"] ?? "1") else {
+            completion(.success)
+            return
+        }
+        let call = PurchaseItemCall(purchaseType: purchaseType, key: key, quantity: quantity)
+        observeObjectCall(call) { result, _ in
+            completion(result)
+        }
+    }
+
+    private func replayPurchaseQuest(_ operation: PendingOperationSnapshot, completion: @escaping (ReplayResult) -> Void) {
+        guard let key = operation.entityID else {
+            completion(.success)
+            return
+        }
+        let call = PurchaseQuestCall(key: key)
+        observeObjectCall(call) { result, _ in
+            completion(result)
+        }
+    }
+
     // MARK: - Helpers
 
     private func observeObjectCall<T: Any, C: Decodable>(_ call: ResponseObjectCall<T, C>,
@@ -474,5 +604,27 @@ final class OfflineSyncEngine {
             return .retry(error.localizedDescription, 15)
         }
         return .retry("no response", 15)
+    }
+
+    /// Marks a task the server has accepted as created and synced.
+    ///
+    /// The task comes back from `getEditableTask`, so it is managed by Realm and
+    /// its properties may only be written inside a transaction.
+    private static func markTaskSynced(_ task: TaskProtocol) {
+        let apply = {
+            task.isNewTask = false
+            task.isSynced = true
+        }
+        guard let object = task as? Object, let realm = object.realm else {
+            apply()
+            return
+        }
+        if realm.isInWriteTransaction {
+            apply()
+            return
+        }
+        try? realm.write {
+            apply()
+        }
     }
 }

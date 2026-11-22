@@ -52,6 +52,58 @@ public class UserLocalRepository: BaseLocalRepository {
             save(objects: notifications.compactMap { $0 })
         }
     }
+
+    /// Creates a fresh local player for standalone mode. No server call is
+    /// involved: stats, preferences, profile, flags and an empty inventory
+    /// are written straight to Realm with the same defaults a new Habitica
+    /// account starts with (50 HP, 10 MP, level 1, 25 XP to next level).
+    public func createLocalUser(userID: String, displayName: String) {
+        guard getUserAsync(userID) == nil else {
+            return
+        }
+        let user = RealmUser()
+        user.id = userID
+        let stats = RealmStats()
+        stats.id = userID
+        stats.health = 50
+        stats.maxHealth = 50
+        stats.mana = 10
+        stats.maxMana = 10
+        stats.experience = 0
+        stats.toNextLevel = 25
+        stats.level = 1
+        stats.strength = 0
+        stats.intelligence = 0
+        stats.constitution = 0
+        stats.perception = 0
+        stats.points = 0
+        stats.gold = 0
+        user.realmStats = stats
+        let preferences = RealmPreferences()
+        preferences.id = userID
+        preferences.dayStart = 0
+        user.realmPreferences = preferences
+        let profile = RealmProfile()
+        profile.id = userID
+        profile.name = displayName
+        user.realmProfile = profile
+        let flags = RealmFlags()
+        flags.id = userID
+        flags.verifiedUsername = true
+        flags.welcomed = true
+        flags.itemsEnabled = true
+        user.realmFlags = flags
+        let items = RealmUserItems()
+        items.id = userID
+        let gear = RealmUserGear()
+        gear.id = userID
+        items.realmGear = gear
+        user.realmItems = items
+        user.needsCron = false
+        user.lastCron = Date()
+        user.loginIncentives = 0
+        save(object: user)
+    }
     
     public func save(_ userId: String, stats: StatsProtocol) {
         RealmUser.findBy(key: userId).take(first: 1).on(value: {[weak self] user in

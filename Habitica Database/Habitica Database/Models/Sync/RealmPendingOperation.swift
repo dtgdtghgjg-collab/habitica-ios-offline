@@ -20,12 +20,18 @@ public enum PendingOperationType: String {
     case updateTag
     case deleteTag
     case runCron
+    case buyItem
+    case equip
+    case hatchPet
+    case feedPet
+    case purchaseItem
+    case purchaseQuest
 
     /// Operations that change game state and must be replayed in the exact
     /// order the user performed them.
     public var isOrderSensitive: Bool {
         switch self {
-        case .scoreTask, .scoreChecklist, .runCron:
+        case .scoreTask, .scoreChecklist, .runCron, .buyItem, .equip, .hatchPet, .feedPet, .purchaseItem, .purchaseQuest:
             return true
         default:
             return false

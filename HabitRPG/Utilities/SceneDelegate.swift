@@ -90,6 +90,9 @@ class SceneDelegate: NSObject, UIWindowSceneDelegate {
     }
     
     private func cleanAndRefresh() {
+        if OfflineState.shared.isStandalone {
+            return
+        }
         retrieveContent()
         configRepository.fetchremoteConfig()
     }

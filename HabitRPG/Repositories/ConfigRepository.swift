@@ -223,6 +223,9 @@ class ConfigRepository: NSObject {
     }
     @objc
     func fetchremoteConfig() {
+        if OfflineState.shared.isStandalone {
+            return
+        }
         ConfigRepository.remoteConfig.fetch(withExpirationDuration: HabiticaAppDelegate.isRunningLive() ? 3600 : 0) { (_, _) in
             ConfigRepository.remoteConfig.activate(completion: { _, _ in
                 if let action = ConfigRepository.onFetchCompleted {

@@ -34,6 +34,9 @@ class ConfigRepository: NSObject {
 
     @objc
     func fetchremoteConfig() {
+        if OfflineState.shared.isStandalone {
+            return
+        }
         Alamofire.request(ConfigRepository.configUrl).responseJSON { response in
             if let JSON = response.result.value as? [String: Any] {
                 for variable in ConfigRepository.configVariables where JSON.contains(where: { (key, _) -> Bool in

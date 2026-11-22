@@ -80,7 +80,7 @@ public class PendingOperationRepository: BaseLocalRepository {
                         storedID = existing.id
                         return
                     }
-                case .scoreTask, .scoreChecklist, .runCron, .moveTask:
+                case .scoreTask, .scoreChecklist, .runCron, .moveTask, .buyItem, .equip, .hatchPet, .feedPet, .purchaseItem, .purchaseQuest:
                     break
                 }
             }

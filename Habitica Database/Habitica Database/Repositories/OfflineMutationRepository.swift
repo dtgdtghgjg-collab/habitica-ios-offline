@@ -583,6 +583,109 @@ public class OfflineMutationRepository: BaseLocalRepository {
     }
 
     /// Distributes stat points gained on level-up. Callers must already have
+    /// Hatches a pet locally: consumes one egg and one potion and adds the pet with trained 0. Realm is the source of truth; the server corrects it on replay.
+    public func hatchPet(userID: String, egg: String, potion: String) {
+        let petKey = egg + "-" + potion
+        guard egg.isEmpty == false, potion.isEmpty == false else {
+            return
+        }
+        updateCall { realm in
+            guard let user = realm.object(ofType: RealmUser.self, forPrimaryKey: userID),
+                  let items = user.realmItems,
+                  let eggItem = items.realmOwnedEggs.first(where: { $0.key == egg }),
+                  let potionItem = items.realmOwnedHatchingPotions.first(where: { $0.key == potion }) else {
+                return
+            }
+            eggItem.numberOwned -= 1
+            if eggItem.numberOwned <= 0 {
+                if let index = items.realmOwnedEggs.firstIndex(where: { $0.key == egg }) {
+                    items.realmOwnedEggs.remove(at: index)
+                }
+                realm.delete(eggItem)
+            }
+            potionItem.numberOwned -= 1
+            if potionItem.numberOwned <= 0 {
+                if let index = items.realmOwnedHatchingPotions.firstIndex(where: { $0.key == potion }) {
+                    items.realmOwnedHatchingPotions.remove(at: index)
+                }
+                realm.delete(potionItem)
+            }
+            guard items.realmOwnedPets.first(where: { $0.key == petKey }) == nil else {
+                return
+            }
+            let pet = RealmOwnedPet()
+            pet.userID = userID
+            pet.key = petKey
+            pet.trained = 0
+            pet.combinedKey = userID + petKey
+            realm.add(pet, update: .modified)
+            items.realmOwnedPets.append(pet)
+        }
+        applyAchievements(userID: userID, hatchedPet: true)
+    }
+
+    /// Feeds a pet locally: consumes one food and adds 5 training points (Saddle raises a mount instead). The server corrects the exact value on replay.
+    public func feedPet(userID: String, petKey: String, food: String) {
+        guard petKey.isEmpty == false, food.isEmpty == false else {
+            return
+        }
+        updateCall { realm in
+            guard let user = realm.object(ofType: RealmUser.self, forPrimaryKey: userID),
+                  let items = user.realmItems,
+                  let foodItem = items.realmOwnedFood.first(where: { $0.key == food }) else {
+                return
+            }
+            foodItem.numberOwned -= 1
+            if foodItem.numberOwned <= 0 {
+                if let index = items.realmOwnedFood.firstIndex(where: { $0.key == food }) {
+                    items.realmOwnedFood.remove(at: index)
+                }
+                realm.delete(foodItem)
+            }
+            if food == "Saddle" {
+                if items.realmOwnedMounts.first(where: { $0.key == petKey }) == nil {
+                    let mount = RealmOwnedMount(userID: userID, key: petKey, owned: true)
+                    realm.add(mount, update: .modified)
+                    items.realmOwnedMounts.append(mount)
+                }
+                if let pet = items.realmOwnedPets.first(where: { $0.key == petKey }) {
+                    pet.trained = -1
+                }
+                return
+            }
+            if let pet = items.realmOwnedPets.first(where: { $0.key == petKey }) {
+                pet.trained += 5
+            }
+        }
+        applyAchievements(userID: userID, fedPet: true)
+    }
+
+    /// Sets the player's class locally and marks it as selected. Used by
+    /// the standalone `selectClass` path; no server call is involved.
+    public func selectClass(userID: String, habitClass: String?) {
+        updateCall { realm in
+            guard let user = realm.object(ofType: RealmUser.self, forPrimaryKey: userID),
+                  let stats = user.realmStats else {
+                return
+            }
+            stats.habitClass = habitClass
+            user.realmFlags?.classSelected = true
+            user.realmPreferences?.disableClasses = false
+        }
+    }
+
+    /// Disables the class system locally. Used by the standalone
+    /// `disableClassSystem` path; no server call is involved.
+    public func disableClasses(userID: String) {
+        updateCall { realm in
+            guard let user = realm.object(ofType: RealmUser.self, forPrimaryKey: userID),
+                  let prefs = user.realmPreferences else {
+                return
+            }
+            prefs.disableClasses = true
+        }
+    }
+
     /// validated that the player has enough unspent points.
     public func applyStatAllocation(userID: String,
                                     strength: Int,
@@ -600,6 +703,29 @@ public class OfflineMutationRepository: BaseLocalRepository {
             stats.constitution = constitution
             stats.perception = perception
             stats.points = points
+        }
+    }
+
+    /// Revives a fainted player locally: health back to full.
+    public func revive(userID: String) {
+        updateCall { realm in
+            guard let user = realm.object(ofType: RealmUser.self, forPrimaryKey: userID),
+                  let stats = user.realmStats else {
+                return
+            }
+            stats.health = stats.maxHealth > 0 ? stats.maxHealth : 50
+        }
+    }
+
+    /// Sets the start of the Habitica day locally. Used by the standalone
+    /// `updateDayStartTime` path; the cron engine reads this value.
+    public func updateDayStart(userID: String, dayStart: Int) {
+        updateCall { realm in
+            guard let user = realm.object(ofType: RealmUser.self, forPrimaryKey: userID),
+                  let prefs = user.realmPreferences else {
+                return
+            }
+            prefs.dayStart = dayStart
         }
     }
 
@@ -717,6 +843,24 @@ public class OfflineMutationRepository: BaseLocalRepository {
                 Self.levelUp(stats: stats)
             }
             for item in rewardItems {
+                // Gear rewards use type "gear", which is not an ItemType raw value, so handle them before the ItemType lookup.
+                if item.type == "gear" {
+                    guard let gear = user.realmItems?.realmGear else {
+                        continue
+                    }
+                    if let existing = gear.realmOwned.first(where: { $0.key == item.key }) {
+                        existing.isOwned = true
+                    } else {
+                        let owned = RealmOwnedGear()
+                        owned.userID = userID
+                        owned.key = item.key
+                        owned.isOwned = true
+                        owned.combinedKey = userID + item.key
+                        realm.add(owned, update: .modified)
+                        gear.realmOwned.append(owned)
+                    }
+                    continue
+                }
                 if let itemType = ItemType(rawValue: item.type) {
                     switch itemType {
                     case .eggs, .hatchingPotions, .food, .quests, .special:
@@ -749,13 +893,9 @@ public class OfflineMutationRepository: BaseLocalRepository {
                             list.append(owned)
                         }
                     default:
-                        // Known limitation (documented, not fixed): this branch
-                        // is unreachable. The surrounding `if let itemType =
-                        // ItemType(rawValue:)` matches every case that itemType
-                        // can hold, so a quest reward whose `type` is not an
-                        // `ItemType` raw value (e.g. "gear") is skipped at that
-                        // guard and never reaches the wardrobe. Offline quest
-                        // completion therefore does not grant gear rewards.
+                        // Unreachable in practice: gear rewards are handled
+                        // above, before the ItemType lookup, and every other
+                        // reward type maps to an ItemType case.
                         guard let gear = user.realmItems?.realmGear else {
                             continue
                         }

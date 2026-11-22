@@ -15,6 +15,9 @@ import ReactiveSwift
 class ContentRepository: BaseRepository<ContentLocalRepository> {
     
     func retrieveContent(force: Bool = false) -> Signal<ContentProtocol?, Never> {
+        if OfflineState.shared.isStandalone {
+            return Signal.empty
+        }
         let defaults = UserDefaults.standard
         let lastContentFetch = defaults.object(forKey: "lastContentFetch") as? NSDate
         let lastContentFetchVersion = defaults.object(forKey: "lastContentFetchVersion") as? String
@@ -40,6 +43,9 @@ class ContentRepository: BaseRepository<ContentLocalRepository> {
     }
     
     func retrieveWorldState(force: Bool = false) -> Signal<WorldStateProtocol?, Never> {
+        if OfflineState.shared.isStandalone {
+            return Signal.empty
+        }
         let defaults = UserDefaults.standard
         let lastWorldStateFetch = defaults.object(forKey: "lastWorldStateFetch") as? NSDate
         if force || lastWorldStateFetch == nil || (lastWorldStateFetch?.timeIntervalSinceNow ?? 0) < -600 {
@@ -70,10 +76,16 @@ class ContentRepository: BaseRepository<ContentLocalRepository> {
     }
     
     func retrieveHallOfContributors() -> Signal<[MemberProtocol]?, Never> {
+        if OfflineState.shared.isStandalone {
+            return Signal.empty
+        }
         return RetrieveHallOfContributorsCall().arraySignal
     }
     
     func retrieveHallOfPatrons() -> Signal<[MemberProtocol]?, Never> {
+        if OfflineState.shared.isStandalone {
+            return Signal.empty
+        }
         return RetrieveHallOfPatronsCall().arraySignal
     }
     

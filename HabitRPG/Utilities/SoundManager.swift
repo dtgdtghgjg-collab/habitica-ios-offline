@@ -204,6 +204,9 @@ class SoundManager {
     }
     
     private func load(soundEffect: SoundEffect) {
+        if OfflineState.shared.isStandalone {
+            return
+        }
         let effectPath = "\(currentTheme.rawValue)/\(soundEffect.rawValue).mp3"
         guard let url = URL(string: "https://s3.amazonaws.com/habitica-assets/mobileApp/sounds/\(effectPath)") else {
             return

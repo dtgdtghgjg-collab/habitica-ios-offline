@@ -12,4 +12,6 @@ import Habitica_Models
 public class APIVerifyUsernameResponse: Decodable, VerifyUsernameResponse {
     public var isUsable: Bool = false
     public var issues: [String]? = []
+
+    public init() {}
 }

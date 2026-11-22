@@ -57,6 +57,9 @@ class LoadingViewController: UIHostingController<LoadingPage> {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        if OfflineState.shared.isStandalone {
+            return
+        }
         if AuthenticationManager.shared.hasAuthentication() {
             userRepository = UserRepository()
             let hasUserData = userRepository?.hasUserData() ?? false
@@ -96,6 +99,11 @@ class LoadingViewController: UIHostingController<LoadingPage> {
             if delegate.handleMaintenanceScreen() {
                 return
             }
+        }
+        if OfflineState.shared.isStandalone {
+            segueForLoggedInUser()
+            super.viewDidAppear(animated)
+            return
         }
         if AuthenticationManager.shared.hasAuthentication() {
             if let repository = userRepository, repository.hasUserData() == false {
