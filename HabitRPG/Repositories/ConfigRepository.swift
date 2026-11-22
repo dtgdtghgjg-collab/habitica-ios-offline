@@ -7,6 +7,7 @@
 //
 import Foundation
 import Habitica_API_Client
+import FirebaseCore
 import FirebaseRemoteConfig
 import Habitica_Models
 
@@ -211,7 +212,15 @@ class ConfigRepository: NSObject {
         super.init()
     }
 
-    private static let remoteConfig = RemoteConfig.remoteConfig()
+    // Lazy, optional access: RemoteConfig.remoteConfig() throws when
+    // FirebaseApp was never configured (standalone mode skips
+    // FirebaseApp.configure()). A static let would crash on first touch.
+    private static var remoteConfig: RemoteConfig? {
+        guard !OfflineState.shared.isStandalone, FirebaseApp.app() != nil else {
+            return nil
+        }
+        return RemoteConfig.remoteConfig()
+    }
     private let userConfig = UserDefaults.standard
     private let contentRepository = ContentRepository()
 
@@ -219,15 +228,18 @@ class ConfigRepository: NSObject {
     
     static var onFetchCompleted: (() -> Void)?
     static var hasFetched: Bool {
-        return remoteConfig.lastFetchStatus == .success
+        return remoteConfig?.lastFetchStatus == .success
     }
     @objc
     func fetchremoteConfig() {
         if OfflineState.shared.isStandalone {
             return
         }
-        ConfigRepository.remoteConfig.fetch(withExpirationDuration: HabiticaAppDelegate.isRunningLive() ? 3600 : 0) { (_, _) in
-            ConfigRepository.remoteConfig.activate(completion: { _, _ in
+        guard let remoteConfig = ConfigRepository.remoteConfig else {
+            return
+        }
+        remoteConfig.fetch(withExpirationDuration: HabiticaAppDelegate.isRunningLive() ? 3600 : 0) { (_, _) in
+            remoteConfig.activate(completion: { _, _ in
                 if let action = ConfigRepository.onFetchCompleted {
                     action()
                 }
@@ -237,7 +249,7 @@ class ConfigRepository: NSObject {
         for variable in ConfigVariable.allVariables() {
             defaults[variable.name()] = variable.defaultValue()
         }
-        ConfigRepository.remoteConfig.setDefaults(defaults)
+        remoteConfig.setDefaults(defaults)
         contentRepository.getWorldState().on(value: {[weak self] state in
             self?.worldState = state
             var hasAprilFools = false
@@ -282,7 +294,7 @@ class ConfigRepository: NSObject {
             return variable.defaultValue()
         }
         #endif
-        return ConfigRepository.remoteConfig.configValue(forKey: variable.name()).boolValue
+        return ConfigRepository.remoteConfig?.configValue(forKey: variable.name()).boolValue ?? (variable.defaultValue() as? NSNumber)?.boolValue ?? false
     }
 
     @objc
@@ -293,7 +305,7 @@ class ConfigRepository: NSObject {
             }
             return nil
         }
-        return ConfigRepository.remoteConfig.configValue(forKey: variable.name()).stringValue
+        return ConfigRepository.remoteConfig?.configValue(forKey: variable.name()).stringValue ?? (variable.defaultValue() as? NSString as String?)
     }
     
     @objc
@@ -303,12 +315,12 @@ class ConfigRepository: NSObject {
     
     @objc
     func integer(variable: ConfigVariable) -> Int {
-        return ConfigRepository.remoteConfig.configValue(forKey: variable.name()).numberValue.intValue
+        return ConfigRepository.remoteConfig?.configValue(forKey: variable.name()).numberValue.intValue ?? (variable.defaultValue() as? NSNumber)?.intValue ?? 0
     }
     
     @objc
     func dictionary(variable: ConfigVariable) -> NSDictionary {
-        let configString = ConfigRepository.remoteConfig.configValue(forKey: variable.name()).stringValue
+        let configString = ConfigRepository.remoteConfig?.configValue(forKey: variable.name()).stringValue ?? (variable.defaultValue() as? NSString as String? ?? "")
         if let data = configString.data(using: String.Encoding.utf8) {
             if let json = try? JSONSerialization.jsonObject(with: data, options: []) {
                 if let jsonDictionary = json as? NSDictionary {
@@ -321,7 +333,7 @@ class ConfigRepository: NSObject {
     
     @objc
     func array(variable: ConfigVariable) -> NSArray {
-        let configString = ConfigRepository.remoteConfig.configValue(forKey: variable.name()).stringValue
+        let configString = ConfigRepository.remoteConfig?.configValue(forKey: variable.name()).stringValue ?? (variable.defaultValue() as? NSString as String? ?? "")
         if let data = configString.data(using: String.Encoding.utf8) {
             do {
                 try JSONSerialization.jsonObject(with: data, options: [])

@@ -399,6 +399,9 @@ class HabiticaAppDelegate: UIResponder, MessagingDelegate, UIApplicationDelegate
     }
     
     func applySearchAdAttribution() {
+        if OfflineState.shared.isStandalone {
+            return
+        }
         if UserDefaults.standard.bool(forKey: "userWasAttributed") {
             return
         }

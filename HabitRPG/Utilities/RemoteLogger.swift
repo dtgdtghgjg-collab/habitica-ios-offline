@@ -18,16 +18,23 @@ class RemoteLogger: HabiticaLogger {
         if error is KingfisherError {
             return
         }
+        guard !OfflineState.shared.isStandalone else {
+            super.log(error)
+            return
+        }
         Crashlytics.crashlytics().record(error: error)
     }
     
     override func record(name: String, reason: String) {
+        guard !OfflineState.shared.isStandalone else {
+            return
+        }
         let exm = ExceptionModel(name: name, reason: reason)
         Crashlytics.crashlytics().record(exceptionModel: exm)
     }
     
     override func log(format: String, level: LogLevel = .debug, arguments: CVaListPointer) {
-        if isProduction {
+        if isProduction && !OfflineState.shared.isStandalone {
             if level == .warning || level == .error {
                 Crashlytics.crashlytics().log(format: format, arguments: arguments)
             }
@@ -37,7 +44,7 @@ class RemoteLogger: HabiticaLogger {
     }
     
     override func log(_ message: String, level: LogLevel = .debug) {
-        if isProduction {
+        if isProduction && !OfflineState.shared.isStandalone {
             if level == .warning || level == .error {
                 Crashlytics.crashlytics().log(message)
             }
@@ -47,7 +54,7 @@ class RemoteLogger: HabiticaLogger {
     }
     
     override func log(_ error: Error) {
-        if isProduction {
+        if isProduction && !OfflineState.shared.isStandalone {
             Crashlytics.crashlytics().record(error: error)
         } else {
             super.log(error)
@@ -55,7 +62,7 @@ class RemoteLogger: HabiticaLogger {
     }
     
     public func setUserID(_ userID: String?) {
-        if !analyticsConsented {
+        if !analyticsConsented || OfflineState.shared.isStandalone {
             return
         }
         Crashlytics.crashlytics().setUserID(userID ?? "")
@@ -63,7 +70,7 @@ class RemoteLogger: HabiticaLogger {
     
     public func setAnalyticsConsent(_ consent: Bool) {
         analyticsConsented = consent
-        if !consent {
+        if !consent && !OfflineState.shared.isStandalone {
             Crashlytics.crashlytics().setUserID(nil)
         }
     }
