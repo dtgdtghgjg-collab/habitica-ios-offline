@@ -169,6 +169,7 @@
 		292BD8B128B4EC36006447EF /* TagListView in Frameworks */ = {isa = PBXBuildFile; productRef = 292BD8B028B4EC36006447EF /* TagListView */; };
 		292DEE3A204D9D290086D5F7 /* Habitica_Models.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 292DEE3B204D9D290086D5F7 /* Habitica_Models.framework */; };
 		292DEE3C204D9D360086D5F7 /* Habitica_Database.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 292DEE3D204D9D360086D5F7 /* Habitica_Database.framework */; };
+		DEADBEEF0123456789ABCDEF02 /* Habitica_API_Client.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DEADBEEF0123456789ABCDEF01 /* Habitica_API_Client.framework */; };
 		292DEE70204DEB120086D5F7 /* TaskTableViewDataSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 292DEE6F204DEB120086D5F7 /* TaskTableViewDataSource.swift */; };
 		292DEE74204DECF60086D5F7 /* BaseReactiveDataSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 292DEE73204DECF60086D5F7 /* BaseReactiveDataSource.swift */; };
 		292DEE76204E053D0086D5F7 /* HabitButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 292DEE75204E053D0086D5F7 /* HabitButton.swift */; };
@@ -731,6 +732,7 @@
 				29DDAC232E8140D9007EC4CD /* RealmSwift in Embed Frameworks */,
 				29265893206A4E84006C8B54 /* Habitica_Database.framework in Embed Frameworks */,
 				29265891206A4E84006C8B54 /* Habitica_Models.framework in Embed Frameworks */,
+				DEADBEEF0123456789ABCDEF03 /* Habitica_API_Client.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -924,6 +926,7 @@
 		292AA72320FE15090022CC5F /* UIFont-Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIFont-Extensions.swift"; sourceTree = "<group>"; };
 		292DEE3B204D9D290086D5F7 /* Habitica_Models.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Habitica_Models.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		292DEE3D204D9D360086D5F7 /* Habitica_Database.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Habitica_Database.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		DEADBEEF0123456789ABCDEF01 /* Habitica_API_Client.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Habitica_API_Client.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 
 		292DEE6F204DEB120086D5F7 /* TaskTableViewDataSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskTableViewDataSource.swift; sourceTree = "<group>"; };
 		292DEE73204DECF60086D5F7 /* BaseReactiveDataSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseReactiveDataSource.swift; sourceTree = "<group>"; };
