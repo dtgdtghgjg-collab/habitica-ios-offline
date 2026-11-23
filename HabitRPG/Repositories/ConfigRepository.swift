@@ -7,6 +7,7 @@
 //
 import Foundation
 import Habitica_Models
+import FirebaseRemoteConfig
 
 @objc
 enum ConfigVariable: Int {
