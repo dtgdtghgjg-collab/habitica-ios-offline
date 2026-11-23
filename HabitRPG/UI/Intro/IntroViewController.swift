@@ -8,6 +8,7 @@
 
 import SwiftUI
 import UIKit
+import Habitica_Models
 
 struct IntroPage<TitleView: View, SubtitleView: View>: View {
     let startColor: Color
@@ -138,17 +139,23 @@ class IntroViewController: UIHostingController<IntroView> {
     
     override func viewWillAppear(_ animated: Bool) {
         rootView.finishIntro = {[weak self] in
-            self?.perform(segue: StoryboardSegue.Intro.loginSegue)
+            // Fully offline: intro ends at the main screen, never at login.
+            // Go directly to main tab bar controller for standalone mode.
+            self?.showMainView()
         }
         super.viewWillAppear(animated)
     }
     
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        if segue.identifier == "LoginSegue" {
-                if let loginViewController = segue.destination as? LoginTableViewController {
-                    loginViewController.isRootViewController = true
-                }
+    private func showMainView() {
+        if ConfigRepository.shared.enableIPadUI() {
+            UIApplication.shared.firstKeyWindow?.rootViewController = StoryboardScene.Main.mainSplitViewController.instantiate()
+        } else {
+            UIApplication.shared.firstKeyWindow?.rootViewController = StoryboardScene.Main.mainTabBarController.instantiate()
         }
+    }
+    
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        // Fully offline: no login segue to prepare for.
     }
 }
 

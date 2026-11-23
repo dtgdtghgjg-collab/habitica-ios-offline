@@ -7,7 +7,6 @@
 //
 import Foundation
 import Habitica_Models
-import Habitica_API_Client
 
 enum Route {
     case achievements

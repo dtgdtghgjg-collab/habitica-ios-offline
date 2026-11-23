@@ -675,7 +675,7 @@ class MainMenuViewController: BaseTableViewController {
     }
     
     private func socialItems() -> [MenuItem] {
-        return [menuItem(withKey: .party), menuItem(withKey: .challenges)] + groupPlanItems + [menuItem(withKey: .messages)]
+        return []
     }
 
     private func setupMenu() {
@@ -703,8 +703,8 @@ class MainMenuViewController: BaseTableViewController {
                 ]),
             MenuSection(key: .social, title: L10n.Menu.social, items: socialItems()),
             MenuSection(key: .purchases, title: nil, items: [
-                menuItem(withKey: .gems),
-                menuItem(withKey: .subscription)
+                // menuItem(withKey: .gems), // Disabled for fully offline
+                // menuItem(withKey: .subscription) // Disabled for fully offline
                 ]),
             MenuSection(key: .about, title: L10n.Titles.about, items: [
                 menuItem(withKey: .settings),

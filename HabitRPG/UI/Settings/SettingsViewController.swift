@@ -42,7 +42,6 @@ enum SettingsTags {
     static let pauseDamage = "pauseDamage"
     static let activePromo = "activePromo"
     static let developerMode = "developerMode"
-    static let developerStandalone = "developerStandalone"
     static let developerResetPrivacy = "developerResetPrivacy"
     static let developerReseedContent = "developerReseedContent"
     static let developerShowInfo = "developerShowInfo"
@@ -284,21 +283,11 @@ class SettingsViewController: FormViewController, Themeable {
                 row.value = OfflineState.shared.isDeveloperMode
                 }.onChange({ [weak self] row in
                     OfflineState.shared.isDeveloperMode = row.value ?? false
-                    self?.form.rowBy(tag: SettingsTags.developerStandalone)?.evaluateHidden()
                     self?.form.rowBy(tag: SettingsTags.developerResetPrivacy)?.evaluateHidden()
                     self?.form.rowBy(tag: SettingsTags.developerReseedContent)?.evaluateHidden()
                     self?.form.rowBy(tag: SettingsTags.developerShowInfo)?.evaluateHidden()
                 })
-            <<< SwitchRow(SettingsTags.developerStandalone) { row in
-                row.title = "Standalone (offline) mode"
-                row.value = OfflineState.shared.isStandalone
-                row.hidden = Condition.function([SettingsTags.developerMode], { form in
-                    return (form.rowBy(tag: SettingsTags.developerMode) as? SwitchRow)?.value != true
-                })
-                }.onChange({ row in
-                    OfflineState.shared.setStandalone(row.value ?? true)
-                    ToastManager.show(text: "Standalone: \((row.value ?? true) ? "on" : "off") — restart the app to apply", color: .green, duration: 4.0)
-                })
+            // Fully offline: standalone mode is always on, no toggle.
             <<< ButtonRow(SettingsTags.developerResetPrivacy) { row in
                 row.title = "Reset privacy consent"
                 row.hidden = Condition.function([SettingsTags.developerMode], { form in
@@ -375,18 +364,7 @@ class SettingsViewController: FormViewController, Themeable {
                     self?.classSelectionButtonTapped()
                 })
             }
-            <<< ButtonRow { row in
-                row.title = L10n.Settings.logOut
-                row.cellUpdate({ (cell, _) in
-                    cell.textLabel?.textColor = UIColor.red50
-                }).onCellSelection({[weak self] (_, _) in
-                    self?.disposable.inner.dispose()
-                    self?.userRepository.logoutAccount { [weak self] in
-                        (UIApplication.shared.delegate as? HabiticaAppDelegate)?.showLoginScreen()
-                        UserManager.shared.logoutCompleted()
-                        self?.contentRepository.retrieveContent(force: true).observeCompleted {}
-                    }
-                })
+            // No log out in fully offline mode: there is no account to leave.
         }
     }
     // swiftlint:disable:next cyclomatic_complexity function_body_length

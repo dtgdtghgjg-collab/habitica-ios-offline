@@ -8,7 +8,6 @@
 
 import Foundation
 import ReactiveSwift
-import Habitica_API_Client
 
 public struct DefaultServerUnavailableErrorMessage: ErrorMessage {
     public let message: String = "The server is unavailable! Try again in a bit. If this keeps happening, please let us know!"
@@ -25,7 +24,7 @@ public struct DefaultOfflineErrorMessage: ErrorMessage {
     public let forCode: Int = -1009
 }
 
-class HabiticaNetworkErrorHandler: NetworkErrorHandler {
+class HabiticaNetworkErrorHandler {
     public let errorMessages: [ErrorMessage]? = [DefaultServerUnavailableErrorMessage(), DefaultServerIssueErrorMessage(), DefaultOfflineErrorMessage()]
     let disposable = ScopedDisposable(CompositeDisposable())
     

@@ -140,7 +140,6 @@
 		2922EE842C80774400254106 /* SubscriptionOptionViewUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2922EE832C80774400254106 /* SubscriptionOptionViewUI.swift */; };
 		2922EE862C888C8500254106 /* SubscriptionDisclaimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2922EE852C888C8500254106 /* SubscriptionDisclaimer.swift */; };
 		2923121828DDAFE9000F5D7A /* CustomizationFooterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2923121728DDAFE9000F5D7A /* CustomizationFooterView.swift */; };
-		29252C382AF4FB330003692D /* Habitica_API_Client.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 29252C372AF4FB330003692D /* Habitica_API_Client.framework */; };
 		29255E431F3DD2120094A3E3 /* TutorialStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29255E421F3DD2120094A3E3 /* TutorialStepView.swift */; };
 		29255E451F3DD3ED0094A3E3 /* TutorialStepView.xib in Resources */ = {isa = PBXBuildFile; fileRef = 29255E441F3DD3ED0094A3E3 /* TutorialStepView.xib */; };
 		29255E471F3E14920094A3E3 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29255E461F3E14920094A3E3 /* AppDelegate.swift */; };
@@ -149,7 +148,6 @@
 		29255E4D1F3E25910094A3E3 /* CGRect-Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29255E4C1F3E25910094A3E3 /* CGRect-Extensions.swift */; };
 		29265891206A4E84006C8B54 /* Habitica_Models.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 292DEE3B204D9D290086D5F7 /* Habitica_Models.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		29265893206A4E84006C8B54 /* Habitica_Database.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 292DEE3D204D9D360086D5F7 /* Habitica_Database.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		29265895206A4E84006C8B54 /* Habitica_API_Client.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 292DEE4D204DA1830086D5F7 /* Habitica_API_Client.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		29267FF328B4BDFA00E756ED /* LabeledFormValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29267FF228B4BDFA00E756ED /* LabeledFormValue.swift */; };
 		2927024324E2D83700BCAA77 /* HallOfContributorsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2927024224E2D83700BCAA77 /* HallOfContributorsViewController.swift */; };
 		2927024624E2D8AB00BCAA77 /* HallOfContributorsDataSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2927024524E2D8AB00BCAA77 /* HallOfContributorsDataSource.swift */; };
@@ -171,7 +169,6 @@
 		292BD8B128B4EC36006447EF /* TagListView in Frameworks */ = {isa = PBXBuildFile; productRef = 292BD8B028B4EC36006447EF /* TagListView */; };
 		292DEE3A204D9D290086D5F7 /* Habitica_Models.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 292DEE3B204D9D290086D5F7 /* Habitica_Models.framework */; };
 		292DEE3C204D9D360086D5F7 /* Habitica_Database.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 292DEE3D204D9D360086D5F7 /* Habitica_Database.framework */; };
-		292DEE4C204DA1830086D5F7 /* Habitica_API_Client.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 292DEE4D204DA1830086D5F7 /* Habitica_API_Client.framework */; };
 		292DEE70204DEB120086D5F7 /* TaskTableViewDataSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 292DEE6F204DEB120086D5F7 /* TaskTableViewDataSource.swift */; };
 		292DEE74204DECF60086D5F7 /* BaseReactiveDataSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 292DEE73204DECF60086D5F7 /* BaseReactiveDataSource.swift */; };
 		292DEE76204E053D0086D5F7 /* HabitButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 292DEE75204E053D0086D5F7 /* HabitButton.swift */; };
@@ -323,8 +320,6 @@
 		2994A8AF28FE945F00CEDED7 /* Habitica_Models.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 292DEE3B204D9D290086D5F7 /* Habitica_Models.framework */; };
 		2994A8B028FE946800CEDED7 /* Habitica_Database.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 292DEE3D204D9D360086D5F7 /* Habitica_Database.framework */; };
 		2994A8B128FE946A00CEDED7 /* Habitica_Database.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 292DEE3D204D9D360086D5F7 /* Habitica_Database.framework */; };
-		2994A8B228FE947800CEDED7 /* Habitica_API_Client.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 292DEE4D204DA1830086D5F7 /* Habitica_API_Client.framework */; };
-		2994A8B328FE947800CEDED7 /* Habitica_API_Client.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 292DEE4D204DA1830086D5F7 /* Habitica_API_Client.framework */; };
 		29951A1E2326670500918FC8 /* InboxOverviewViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29951A1D2326670500918FC8 /* InboxOverviewViewController.swift */; };
 		29951A20232669C600918FC8 /* InboxChatViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29951A1F232669C500918FC8 /* InboxChatViewController.swift */; };
 		29951A222327E94F00918FC8 /* ThemedNavigationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29951A212327E94F00918FC8 /* ThemedNavigationController.swift */; };
@@ -736,7 +731,6 @@
 				29DDAC232E8140D9007EC4CD /* RealmSwift in Embed Frameworks */,
 				29265893206A4E84006C8B54 /* Habitica_Database.framework in Embed Frameworks */,
 				29265891206A4E84006C8B54 /* Habitica_Models.framework in Embed Frameworks */,
-				29265895206A4E84006C8B54 /* Habitica_API_Client.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -909,7 +903,7 @@
 		2922EE832C80774400254106 /* SubscriptionOptionViewUI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionOptionViewUI.swift; sourceTree = "<group>"; };
 		2922EE852C888C8500254106 /* SubscriptionDisclaimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionDisclaimer.swift; sourceTree = "<group>"; };
 		2923121728DDAFE9000F5D7A /* CustomizationFooterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomizationFooterView.swift; sourceTree = "<group>"; };
-		29252C372AF4FB330003692D /* Habitica_API_Client.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Habitica_API_Client.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+
 		29255E421F3DD2120094A3E3 /* TutorialStepView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TutorialStepView.swift; sourceTree = "<group>"; };
 		29255E441F3DD3ED0094A3E3 /* TutorialStepView.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = TutorialStepView.xib; sourceTree = "<group>"; };
 		29255E461F3E14920094A3E3 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -930,7 +924,7 @@
 		292AA72320FE15090022CC5F /* UIFont-Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIFont-Extensions.swift"; sourceTree = "<group>"; };
 		292DEE3B204D9D290086D5F7 /* Habitica_Models.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Habitica_Models.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		292DEE3D204D9D360086D5F7 /* Habitica_Database.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Habitica_Database.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		292DEE4D204DA1830086D5F7 /* Habitica_API_Client.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Habitica_API_Client.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+
 		292DEE6F204DEB120086D5F7 /* TaskTableViewDataSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskTableViewDataSource.swift; sourceTree = "<group>"; };
 		292DEE73204DECF60086D5F7 /* BaseReactiveDataSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseReactiveDataSource.swift; sourceTree = "<group>"; };
 		292DEE75204E053D0086D5F7 /* HabitButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HabitButton.swift; sourceTree = "<group>"; };
@@ -1495,7 +1489,6 @@
 				29D048C02E3A647F004A6AAA /* RealmSwift in Frameworks */,
 				29F1A0012E9A000100C0FFEE /* Habitica_Models.framework in Frameworks */,
 				2994A8B128FE946A00CEDED7 /* Habitica_Database.framework in Frameworks */,
-				29252C382AF4FB330003692D /* Habitica_API_Client.framework in Frameworks */,
 				29BEE62F252CCFE100D456F8 /* SwiftUI.framework in Frameworks */,
 				2938ED3E28B4EEB200E995A2 /* KeychainAccess in Frameworks */,
 				29BEE62D252CCFE100D456F8 /* WidgetKit.framework in Frameworks */,
@@ -1511,7 +1504,6 @@
 				2994A8B028FE946800CEDED7 /* Habitica_Database.framework in Frameworks */,
 				2938ED4028B4EEBC00E995A2 /* KeychainAccess in Frameworks */,
 				2994A8AE28FE945E00CEDED7 /* Habitica_Models.framework in Frameworks */,
-				2994A8B228FE947800CEDED7 /* Habitica_API_Client.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1521,7 +1513,7 @@
 			files = (
 				7A84E19C228928AD0081E96F /* IntentsUI.framework in Frameworks */,
 				2994A8AF28FE945F00CEDED7 /* Habitica_Models.framework in Frameworks */,
-				2994A8B328FE947800CEDED7 /* Habitica_API_Client.framework in Frameworks */,
+
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1548,7 +1540,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				292BD89F28B4EA85006447EF /* AppAuth in Frameworks */,
-				292DEE4C204DA1830086D5F7 /* Habitica_API_Client.framework in Frameworks */,
+
 				29AE771A27E3521800CC9646 /* InputBarAccessoryView in Frameworks */,
 				292DEE3C204D9D360086D5F7 /* Habitica_Database.framework in Frameworks */,
 				292DEE3A204D9D290086D5F7 /* Habitica_Models.framework in Frameworks */,
@@ -2888,9 +2880,7 @@
 			isa = PBXGroup;
 			children = (
 				296E4F0E2C91A6A800D9CBDE /* Habitica_Models.framework */,
-				29252C372AF4FB330003692D /* Habitica_API_Client.framework */,
 				29995A6026CBCB0B0063D4C9 /* AdServices.framework */,
-				292DEE4D204DA1830086D5F7 /* Habitica_API_Client.framework */,
 				292DEE3D204D9D360086D5F7 /* Habitica_Database.framework */,
 				292DEE3B204D9D290086D5F7 /* Habitica_Models.framework */,
 				D92D26151D58EF00001FD977 /* AVFoundation.framework */,

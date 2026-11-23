@@ -90,7 +90,8 @@ class ImageManager {
         guard let url = ImageManager.buildImageUrl(name: name, extension: fileExtension) else {
             return
         }
-        kingfisher.retrieveImage(with: url) { result in
+        // Fully offline: sprites are served only from the local cache, never fetched.
+        kingfisher.retrieveImage(with: url, options: [.onlyFromCache]) { result in
             switch result {
             case .success(let imageResult):
                 completion(imageResult.image, nil)

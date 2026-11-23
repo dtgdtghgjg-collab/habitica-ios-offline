@@ -23,6 +23,7 @@ final class OfflineCronEngine {
     private let mutationRepository = OfflineMutationRepository()
     private let disposable = ScopedDisposable(CompositeDisposable())
     private var hasStarted = false
+    private var cronTimer: Timer?
 
     private init() {}
 
@@ -40,6 +41,12 @@ final class OfflineCronEngine {
                 self?.runIfNeeded()
             })
 
+        disposable.inner.add(NotificationCenter.default.reactive
+            .notifications(forName: UIApplication.willEnterForegroundNotification)
+            .observeValues { [weak self] _ in
+                self?.runIfNeeded()
+            })
+
         disposable.inner.add(NetworkMonitor.shared.isOnline.producer
             .skipRepeats()
             .startWithValues { [weak self] isOnline in
@@ -47,6 +54,39 @@ final class OfflineCronEngine {
                     self?.runIfNeeded()
                 }
             })
+
+        // Schedule precise timer for next day transition.
+        let dayStart = userLocalRepository.preferencesDayStart()
+        scheduleNextCronTimer(dayStart: dayStart)
+    }
+
+    /// Stops any running timer. Call on logout or when standalone mode ends.
+    func stop() {
+        cronTimer?.invalidate()
+        cronTimer = nil
+        disposable.inner.dispose()
+    }
+
+    /// Schedules a timer to fire exactly at the next day start.
+    private func scheduleNextCronTimer(dayStart: Int) {
+        cronTimer?.invalidate()
+
+        let now = Date()
+        let calendar = Calendar.current
+        let nextDayStart = calendar.date(byAdding: .hour, value: dayStart, to: calendar.startOfDay(for: now)) ?? now
+        var nextCron = nextDayStart
+        if now >= nextCron {
+            nextCron = calendar.date(byAdding: .day, value: 1, to: nextDayStart) ?? nextCron
+        }
+
+        let interval = nextCron.timeIntervalSince(now)
+        guard interval > 0 else { return }
+
+        cronTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
+            self?.runIfNeeded()
+            // After running, schedule the next one for the next day start.
+            self?.scheduleNextCronTimer(dayStart: dayStart)
+        }
     }
 
     private var lastCronKey: String {

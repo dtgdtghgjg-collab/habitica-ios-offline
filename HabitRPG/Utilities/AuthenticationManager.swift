@@ -8,15 +8,13 @@
 
 import Foundation
 import ReactiveSwift
-import Habitica_API_Client
 
 class AuthenticationManager {
 
     func initialize(withStorage storage: AuthenticationStorage) {
-        self.storage = storage
-        // This is to properly run the setters so that the app is correctly configured
-        currentUserId = storage.userID
-        currentUserKey = storage.apiKey
+        // Fully offline: always set to offline-local user
+        currentUserId = "offline-local"
+        currentUserKey = "offline-local"
     }
     
     static let shared = AuthenticationManager()
@@ -24,21 +22,13 @@ class AuthenticationManager {
 
     var currentUserId: String? {
         get {
-            return storage?.userID
+            return storage?.userID ?? "offline-local"
         }
         
         set(newValue) {
             storage?.userID = newValue
             currentUserIDProperty.value = newValue
             UserDefaults.standard.set(newValue, forKey: "currentUserId")
-            NetworkAuthenticationManager.shared.currentUserId = newValue
-            if let newID = newValue {
-                (logger as? RemoteLogger)?.setUserID(newID)
-                HabiticaAnalytics.shared.setUserID(newID)
-            } else {
-                (logger as? RemoteLogger)?.setUserID(nil)
-                HabiticaAnalytics.shared.setUserID(nil)
-            }
         }
     }
 
@@ -46,12 +36,11 @@ class AuthenticationManager {
 
     var currentUserKey: String? {
         get {
-            return storage?.apiKey
+            return storage?.apiKey ?? "offline-local"
         }
         
         set(newValue) {
             storage?.apiKey = newValue
-            NetworkAuthenticationManager.shared.currentUserKey = newValue
         }
     }
 
@@ -60,7 +49,8 @@ class AuthenticationManager {
     }
 
     func hasAuthentication() -> Bool {
-        return currentUserId?.isEmpty == false && currentUserKey?.isEmpty == false
+        // Fully offline: always returns true since we have a local user
+        return true
     }
 
     func setAuthentication(userId: String, key: String) {
@@ -69,8 +59,8 @@ class AuthenticationManager {
     }
 
     func clearAuthenticationForAllUsers() {
-        currentUserId = nil
-        currentUserKey = nil
+        currentUserId = "offline-local"
+        currentUserKey = "offline-local"
     }
 
     func clearAuthentication(userId: String) {

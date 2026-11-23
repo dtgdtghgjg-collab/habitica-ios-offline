@@ -9,7 +9,6 @@
 import Foundation
 import ReactiveSwift
 import Habitica_Models
-import Habitica_API_Client
 import Habitica_Database
 import RealmSwift
 
@@ -26,29 +25,18 @@ class TaskRepository: BaseRepository<TaskLocalRepository> {
     static var currentQuestKey: String?
     
     func retrieveTasks(dueOnDay: Date? = nil) -> Signal<[TaskProtocol]?, Never> {
-        let call = RetrieveTasksCall(dueOnDay: dueOnDay)
-        
-        return call.arraySignal.on(value: {[weak self] tasks in
-            if let tasks = tasks, dueOnDay == nil {
-                self?.localRepository.save(userID: self?.currentUserId, tasks: tasks)
-            }
-        })
+        // Fully offline: tasks come from Realm only.
+        return Signal.empty
     }
     
     func retrieveCompletedTodos() -> Signal<[TaskProtocol]?, Never> {
-        let call = RetrieveTasksCall(type: "completedTodos")
-        
-        return call.arraySignal.on(value: {[weak self] tasks in
-            if let tasks = tasks {
-                self?.localRepository.save(userID: self?.currentUserId, tasks: tasks, removeCompletedTodos: true)
-            }
-        })
+        // Fully offline: completed todos come from Realm only.
+        return Signal.empty
     }
     
     func clearCompletedTodos() -> Signal<[TaskProtocol]?, Never> {
-        let call = ClearCompletedTodosCall()
-        
-        return call.arraySignal
+        // Fully offline: no server clear, completed todos stay in Realm.
+        return Signal.empty
     }
     
     func getTasks(predicate: NSPredicate, sortKey: String = "order") -> SignalProducer<ReactiveResults<[TaskProtocol]>, ReactiveSwiftRealmError> {
@@ -93,36 +81,10 @@ class TaskRepository: BaseRepository<TaskLocalRepository> {
         }
         UIImpactFeedbackGenerator.oneShotImpactOccurred(.light)
 
-        // Standalone players never reach the server: scoring is always local.
-        if OfflineState.shared.isStandalone || OfflineState.shared.isOffline {
-            let previousStats = OfflineScoreEngine.shared.currentStats()
-            return OfflineScoreEngine.shared.score(task: task, direction: direction)
-                .on(value: { [weak self] response in
-                    guard let response = response, let previousStats = previousStats else {
-                        return
-                    }
-                    self?.handleScoreResponse(task: task,
-                                              response: response,
-                                              stats: nil,
-                                              previousStats: previousStats,
-                                              direction: direction,
-                                              applyLocalUpdate: false)
-                })
-        }
-
-        let scoreCall = ScoreTaskCall(task: task, direction: direction)
-        let scoreSignal = scoreCall.objectSignal
-
-        // The reachability check can be optimistic; if the request really
-        // failed because the connection is gone, score locally instead of
-        // dropping the user's tap.
-        scoreCall.errorSignal.observeValues { [weak self] error in
-            guard error.isConnectionError else {
-                return
-            }
-            NetworkMonitor.shared.reportConnectionFailure()
-            let previousStats = OfflineScoreEngine.shared.currentStats()
-            OfflineScoreEngine.shared.score(task: task, direction: direction).observeValues { response in
+        // Fully offline: scoring is always local, never the server.
+        let previousStats = OfflineScoreEngine.shared.currentStats()
+        return OfflineScoreEngine.shared.score(task: task, direction: direction)
+            .on(value: { [weak self] response in
                 guard let response = response, let previousStats = previousStats else {
                     return
                 }
@@ -132,30 +94,7 @@ class TaskRepository: BaseRepository<TaskLocalRepository> {
                                           previousStats: previousStats,
                                           direction: direction,
                                           applyLocalUpdate: false)
-            }
-        }
-
-        let userId = AuthenticationManager.shared.currentUserId ?? ""
-        let statsProducer = localRepository.getUserStats(id: userId)
-            .flatMapError { _ -> SignalProducer<StatsProtocol, Never> in
-                return SignalProducer.empty
-            }
-
-        let combinedSignal = scoreSignal.withLatest(from: statsProducer)
-
-        return combinedSignal.on(value: { [weak self] (taskResponse, stats) in
-            guard let response = taskResponse else {
-                return
-            }
-            self?.handleScoreResponse(task: task,
-                                      response: response,
-                                      stats: stats,
-                                      previousStats: OfflineStatsSnapshot(stats: stats),
-                                      direction: direction,
-                                      applyLocalUpdate: true)
-        }).map({ (response, _) in
-            return response
-        })
+            })
     }
 
     private func handleScoreResponse(task: TaskProtocol,
@@ -224,13 +163,12 @@ class TaskRepository: BaseRepository<TaskLocalRepository> {
     }
     
     func score(checklistItem: ChecklistItemProtocol, task: TaskProtocol) -> Signal<TaskProtocol?, Never> {
-        let call = ScoreChecklistItem(item: checklistItem, task: task)
-        
-        return call.objectSignal.on(value: {[weak self] task in
-                if let task = task {
-                    self?.localRepository.save(userID: self?.currentUserId, task: task)
-                }
-            })
+        // Fully offline: checklist items are scored locally only.
+        localRepository.save(userID: currentUserId, task: task)
+        return Signal<TaskProtocol?, Never> { observer, _ in
+            observer.send(value: task)
+            observer.sendCompleted()
+        }
     }
     
     func getNewTask() -> TaskProtocol {
@@ -258,37 +196,8 @@ class TaskRepository: BaseRepository<TaskLocalRepository> {
     }
     
     func createTask(_ task: TaskProtocol) -> Signal<TaskProtocol?, Never> {
-        localRepository.save(userID: currentUserId, task: task)
-
-        if OfflineState.shared.isOffline {
-            return saveTaskOffline(task, isNew: true)
-        }
-
-        localRepository.setTaskSyncing(userID: currentUserId, task: task, isSyncing: true)
-
-        let call = CreateTaskCall(task: task)
-        call.errorSignal.observeValues {[weak self] error in
-            if error.isConnectionError {
-                NetworkMonitor.shared.reportConnectionFailure()
-                self?.saveTaskOffline(task, isNew: true)
-            }
-        }
-
-        return call.objectSignal.on(value: {[weak self] returnedTask in
-            if let returnedTask = returnedTask {
-                // The server answer is persisted straight from the network
-                // payload, but the flags below are still Realm writes.
-                Self.markTaskSynced(returnedTask)
-
-                self?.localRepository.save(userID: self?.currentUserId, task: returnedTask)
-            }
-            
-            let defaults = UserDefaults.standard
-            if !Calendar.current.isDateInToday(Date(timeIntervalSince1970: defaults.double(forKey: "last_task_create_report"))) {
-                HabiticaAnalytics.shared.log("task created", withEventProperties: [:])
-                defaults.set(Date().timeIntervalSince1970, forKey: "last_task_create_report")
-            }
-        })
+        // Fully offline: tasks are created locally only.
+        return saveTaskOffline(task, isNew: true)
     }
 
     /// Stores a task locally and queues it for the next successful sync.
@@ -352,42 +261,18 @@ class TaskRepository: BaseRepository<TaskLocalRepository> {
     }
 
     func createChallengeTask(challengeID: String, task: TaskProtocol) -> Signal<TaskProtocol?, Never> {
-        return CreateChallengeTaskCall(challengeID: challengeID, task: task).objectSignal
+        // Fully offline: no server challenges.
+        return Signal.empty
     }
     
     func createTasks(_ tasks: [TaskProtocol]) -> Signal<[TaskProtocol]?, Never> {
-        let call = CreateTasksCall(tasks: tasks)
-        return call.arraySignal
+        // Fully offline: tasks are created locally only.
+        return Signal.empty
     }
     
     func updateTask(_ task: TaskProtocol) -> Signal<TaskProtocol?, Never> {
-        localRepository.save(userID: currentUserId, task: task)
-
-        if OfflineState.shared.isOffline {
-            return saveTaskOffline(task, isNew: task.isNewTask)
-        }
-
-        localRepository.setTaskSyncing(userID: currentUserId, task: task, isSyncing: true)
-        let call = UpdateTaskCall(task: task)
-        
-        call.errorSignal.observeValues {[weak self] error in
-            if error.isConnectionError {
-                NetworkMonitor.shared.reportConnectionFailure()
-                self?.saveTaskOffline(task, isNew: task.isNewTask)
-            } else {
-                self?.localRepository.setTaskSyncing(userID: self?.currentUserId, task: task, isSyncing: false)
-            }
-        }
-        return call.objectSignal.on(value: {[weak self]returnedTask in
-            if let returnedTask = returnedTask {
-                // `returnedTask` may be a managed object; `order` is then a
-                // Realm write and has to happen inside a transaction.
-                Self.applyRealmFlags(to: returnedTask) {
-                    returnedTask.order = task.order
-                }
-                self?.localRepository.save(userID: self?.currentUserId, task: returnedTask)
-            }
-        })
+        // Fully offline: tasks are updated locally only.
+        return saveTaskOffline(task, isNew: task.isNewTask)
     }
     
     func syncTask(_ task: TaskProtocol) -> Signal<TaskProtocol?, Never> {
@@ -403,151 +288,52 @@ class TaskRepository: BaseRepository<TaskLocalRepository> {
         if !task.isValid {
             return Signal.empty
         }
-
-        if OfflineState.shared.isOffline {
-            OfflineSyncEngine.shared.enqueueDelete(task: task)
-            localRepository.deleteTask(task)
-            return Signal<EmptyResponseProtocol?, Never> { observer, _ in
-                observer.send(value: nil)
-                observer.sendCompleted()
-            }
+        // Fully offline: tasks are deleted locally only.
+        localRepository.deleteTask(task)
+        return Signal<EmptyResponseProtocol?, Never> { observer, _ in
+            observer.send(value: nil)
+            observer.sendCompleted()
         }
-
-        let call = DeleteTaskCall(task: task)
-        
-        call.errorSignal.observeValues {[weak self] error in
-            if error.isConnectionError {
-                NetworkMonitor.shared.reportConnectionFailure()
-                OfflineSyncEngine.shared.enqueueDelete(task: task)
-                if task.isValid {
-                    self?.localRepository.deleteTask(task)
-                }
-            }
-        }
-        call.httpResponseSignal.observeValues {[weak self] (response) in
-            if response.statusCode == 200, task.isValid {
-                self?.localRepository.deleteTask(task)
-            }
-        }
-        return call.objectSignal
     }
     
     func createTag(_ tag: TagProtocol) -> Signal<TagProtocol?, Never> {
-        let localID = tag.id
-        let order = tag.order
-        if localID?.isEmpty == false {
+        // Fully offline: tags are created locally only.
+        if tag.id?.isEmpty == false {
             localRepository.save(userID: currentUserId, tag: tag)
         }
-
-        if OfflineState.shared.isOffline {
-            OfflineSyncEngine.shared.enqueueTag(tag, isNew: true)
-            return Signal<TagProtocol?, Never> { observer, _ in
-                observer.send(value: tag)
-                observer.sendCompleted()
-            }
+        return Signal<TagProtocol?, Never> { observer, _ in
+            observer.send(value: tag)
+            observer.sendCompleted()
         }
-
-        let call = CreateTagCall(tag: tag)
-
-        call.errorSignal.observeValues {[weak self] error in
-            if error.isConnectionError {
-                NetworkMonitor.shared.reportConnectionFailure()
-                OfflineSyncEngine.shared.enqueueTag(tag, isNew: true)
-            } else if let self = self, let localID = localID, !localID.isEmpty {
-                self.localRepository.deleteTag(self.localRepository.getNewTag(id: localID))
-            }
-        }
-        return call.objectSignal.on(value: {[weak self]returnedTag in
-            if let returnedTag = returnedTag, let self = self {
-                returnedTag.order = order
-                if let localID = localID, !localID.isEmpty {
-                    if self.localRepository.getEditableTag(id: localID) == nil {
-                        return
-                    }
-                    if returnedTag.id != localID {
-                        self.localRepository.deleteTag(self.localRepository.getNewTag(id: localID))
-                    }
-                }
-                self.localRepository.save(userID: self.currentUserId, tag: returnedTag)
-            }
-        })
     }
     
     func updateTag(_ tag: TagProtocol) -> Signal<TagProtocol?, Never> {
-        let order = tag.order
+        // Fully offline: tags are updated locally only.
         if !tag.isManaged {
             localRepository.save(userID: currentUserId, tag: tag)
         }
-
-        if OfflineState.shared.isOffline {
-            OfflineSyncEngine.shared.enqueueTag(tag, isNew: false)
-            return Signal<TagProtocol?, Never> { observer, _ in
-                observer.send(value: tag)
-                observer.sendCompleted()
-            }
+        return Signal<TagProtocol?, Never> { observer, _ in
+            observer.send(value: tag)
+            observer.sendCompleted()
         }
-
-        let call = UpdateTagCall(tag: tag)
-
-        call.errorSignal.observeValues { error in
-            if error.isConnectionError {
-                NetworkMonitor.shared.reportConnectionFailure()
-                OfflineSyncEngine.shared.enqueueTag(tag, isNew: false)
-            }
-        }
-        return call.objectSignal.on(value: {[weak self]returnedTag in
-            if let returnedTag = returnedTag {
-                returnedTag.order = order
-                self?.localRepository.save(userID: self?.currentUserId, tag: returnedTag)
-            }
-        })
     }
     
     func deleteTag(_ tag: TagProtocol) -> Signal<EmptyResponseProtocol?, Never> {
-        if OfflineState.shared.isOffline {
-            OfflineSyncEngine.shared.enqueueDeleteTag(tag)
-            localRepository.deleteTag(tag)
-            return Signal<EmptyResponseProtocol?, Never> { observer, _ in
-                observer.send(value: nil)
-                observer.sendCompleted()
-            }
-        }
-
-        let call = DeleteTagCall(tag: tag)
-        call.errorSignal.observeValues { error in
-            if error.isConnectionError {
-                NetworkMonitor.shared.reportConnectionFailure()
-                OfflineSyncEngine.shared.enqueueDeleteTag(tag)
-            }
-        }
+        // Fully offline: tags are deleted locally only.
         localRepository.deleteTag(tag)
-        return call.objectSignal
+        return Signal<EmptyResponseProtocol?, Never> { observer, _ in
+            observer.send(value: nil)
+            observer.sendCompleted()
+        }
     }
     
     func moveTask(_ task: TaskProtocol, toPosition: Int) -> Signal<[String]?, Never> {
-        if OfflineState.shared.isOffline {
-            fixTaskOrder(movedTask: task, toPosition: toPosition)
-            OfflineSyncEngine.shared.enqueueMove(task: task, toPosition: toPosition)
-            return Signal<[String]?, Never> { observer, _ in
-                observer.send(value: nil)
-                observer.sendCompleted()
-            }
+        // Fully offline: task order changes locally only.
+        fixTaskOrder(movedTask: task, toPosition: toPosition)
+        return Signal<[String]?, Never> { observer, _ in
+            observer.send(value: nil)
+            observer.sendCompleted()
         }
-
-        let call = MoveTaskCall(task: task, toPosition: toPosition)
-
-        call.errorSignal.observeValues {[weak self] error in
-            if error.isConnectionError {
-                NetworkMonitor.shared.reportConnectionFailure()
-                self?.fixTaskOrder(movedTask: task, toPosition: toPosition)
-                OfflineSyncEngine.shared.enqueueMove(task: task, toPosition: toPosition)
-            }
-        }
-        return call.arraySignal.on(value: {[weak self] taskOrder in
-            if let taskType = task.type, let taskOrder = taskOrder {
-                self?.localRepository.updateTaskOrder(taskType: taskType, order: taskOrder)
-            }
-        })
     }
     
     func fixTaskOrder(movedTask: TaskProtocol, toPosition: Int) {
@@ -569,19 +355,15 @@ class TaskRepository: BaseRepository<TaskLocalRepository> {
     }
     
     func unlinkAllTasks(challengeID: String, keepOption: String) -> Signal<[TaskProtocol]?, Never> {
-        let call = UnlinkAllTasksCall(challengeID: challengeID, keepOption: keepOption)
-        return call.objectSignal.flatMap(.latest) {[weak self] _ in
-            return self?.retrieveTasks() ?? Signal.empty
-        }
+        // Fully offline: no server challenges to unlink from.
+        return Signal.empty
     }
 
     func unlinkOneTask(task: TaskProtocol, keepOption: String) -> Signal<[TaskProtocol]?, Never> {
-        let call = UnlinkOneTaskCall(taskID: task.id ?? "", keepOption: keepOption)
-        return call.objectSignal.flatMap(.latest) {[weak self] _ -> Signal<[TaskProtocol]?, Never> in
-            if keepOption == "remove" {
-                self?.localRepository.deleteTask(task)
-            }
-            return self?.retrieveTasks() ?? Signal.empty
+        // Fully offline: no server challenges to unlink from.
+        if keepOption == "remove" {
+            localRepository.deleteTask(task)
         }
+        return Signal.empty
     }
 }

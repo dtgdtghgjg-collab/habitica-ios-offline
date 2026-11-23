@@ -8,7 +8,6 @@
 
 import Foundation
 import Habitica_Models
-import Habitica_API_Client
 
 private struct RegexRoute {
     static private let parameterURLRegex = ":[a-zA-Z0-9-_]+"

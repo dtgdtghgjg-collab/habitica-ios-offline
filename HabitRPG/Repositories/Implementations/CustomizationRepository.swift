@@ -9,7 +9,6 @@
 import Foundation
 import Habitica_Database
 import Habitica_Models
-import Habitica_API_Client
 import ReactiveSwift
 
 class CustomizationRepository: BaseRepository<CustomizationLocalRepository> {
@@ -27,53 +26,22 @@ class CustomizationRepository: BaseRepository<CustomizationLocalRepository> {
     }
     
     public func unlock(customization: CustomizationProtocol, value: Float) -> Signal<UserProtocol?, Never> {
-        let call = UnlockCustomizationsCall(path: customization.path)
-        
-        return call.objectSignal.on(value: {[weak self] newUser in
-            if let userID = self?.currentUserId, let user = newUser {
-                self?.userLocalRepository.updateUser(id: userID, balanceDiff: -(value / 4.0))
-                self?.userLocalRepository.updateUser(id: userID, updateUser: user)
-            }
-        })
+        // Fully offline: no server unlocks.
+        return Signal.empty
     }
     
     public func unlock(path: String, value: Float, text: String) -> Signal<UserProtocol?, Never> {
-        let call = UnlockCustomizationsCall(path: path)
-        return call.objectSignal.on(value: {[weak self] newUser in
-            if let userID = self?.currentUserId, let user = newUser {
-                self?.userLocalRepository.updateUser(id: userID, balanceDiff: -(value / 4.0))
-                self?.userLocalRepository.updateUser(id: userID, updateUser: user)
-            }
-            if value > 0 {
-                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now()+1) {
-                    ToastManager.show(text: L10n.purchased(text), color: .green)
-                }
-            }
-        })
+        // Fully offline: no server unlocks.
+        return Signal.empty
     }
     
     public func unlock(customizationSet: CustomizationSetProtocol, value: Float) -> Signal<UserProtocol?, Never> {
-        let path = (customizationSet.setItems ?? []).map({ (customization) -> String in
-            return customization.path
-        }).joined(separator: ",")
-        let call = UnlockCustomizationsCall(path: path)
-        
-        return call.objectSignal.on(value: {[weak self] newUser in
-            if let userID = self?.currentUserId, let user = newUser {
-                self?.userLocalRepository.updateUser(id: userID, balanceDiff: -(value / 4.0))
-                self?.userLocalRepository.updateUser(id: userID, updateUser: user)
-            }
-        })
+        // Fully offline: no server unlocks.
+        return Signal.empty
     }
     
     public func unlock(gear: GearProtocol, value: Int) -> Signal<UserProtocol?, Never> {
-        let call = UnlockGearCall(gear: [gear])
-        
-        return call.objectSignal.on(value: {[weak self]newUser in
-            if let userID = self?.currentUserId, let user = newUser {
-                self?.userLocalRepository.updateUser(id: userID, balanceDiff: -(Float(value) / 4.0))
-                self?.userLocalRepository.updateUser(id: userID, updateUser: user)
-            }
-        })
+        // Fully offline: no server unlocks.
+        return Signal.empty
     }
 }

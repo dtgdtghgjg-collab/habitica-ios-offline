@@ -41,6 +41,8 @@ extension AccountSettingsViewController: ASAuthorizationControllerDelegate {
     }
     
     func googleLoginButtonPressed() {
+        // Fully offline: Google sign-in is removed, no network auth flow.
+        return
         guard let authorizationEndpoint = URL(string: "https://accounts.google.com/o/oauth2/v2/auth") else {
             return
         }
@@ -77,6 +79,8 @@ extension AccountSettingsViewController: ASAuthorizationControllerDelegate {
     }
     
     func appleLoginButtonPressed() {
+        // Fully offline: Apple sign-in is removed, no network auth flow.
+        return
         let appleIDProvider = ASAuthorizationAppleIDProvider()
         let request = appleIDProvider.createRequest()
         request.requestedScopes = [.fullName, .email]
@@ -122,6 +126,11 @@ extension AccountSettingsViewController: ASAuthorizationControllerDelegate {
     }
     
     func performAppleLogin(identityToken: String, name: String) {
+        // Fully offline: keep only the local profile name, never call the server.
+        if !name.isEmpty, let userID = OfflineState.shared.currentUserID {
+            OfflineProfile.shared.updateProfile(userID: userID, name: name, blurb: nil)
+        }
+        return
         userRepository.loginApple(identityToken: identityToken, name: name, email: "", allowRegister: false).observeResult {[weak self] (result) in
             switch result {
             case .success:

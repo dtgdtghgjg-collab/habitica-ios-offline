@@ -4,15 +4,15 @@
 //
 //  Seeds the bundled content catalogue into Realm on a clean standalone
 //  launch, so shops, gear, quests, pets and drops exist without any
-//  network request. The catalogue is the same payload the API returns;
-//  it is decoded with APIContent and saved through ContentLocalRepository.
+//  network request. The catalogue is a bundled JSON file that mirrors
+//  the API content payload; it is decoded with the local content model
+//  and saved through ContentLocalRepository.
 //  The bundle file must be added to the Habitica target (see content.json
 //  next to this file); if it is missing the seed is a no-op and the log
 //  says so instead of crashing.
 //
 
 import Foundation
-import Habitica_API_Client
 import Habitica_Database
 import Habitica_Models
 
@@ -35,12 +35,13 @@ final class OfflineContentSeeder {
             }
         }
         guard let url = Bundle.main.url(forResource: "content", withExtension: "json"),
-              let data = try? Data(contentsOf: url),
-              let content = try? JSONDecoder().decode(APIContent.self, from: data) else {
+              let data = try? Data(contentsOf: url) else {
             logger.log("Offline content seed: bundled content.json not found or invalid")
             return
         }
-        contentRepository.save(content)
+        // Fully offline: decode the bundled content catalogue directly
+        // into the local content repository. No API client is needed.
+        contentRepository.save(contentData: data)
         let defaults = UserDefaults.standard
         defaults.set(Date(), forKey: "lastContentFetch")
         defaults.set(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String, forKey: "lastContentFetchVersion")

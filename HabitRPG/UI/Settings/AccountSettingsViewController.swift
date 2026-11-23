@@ -61,10 +61,9 @@ class AccountSettingsViewController: FormViewController, Themeable, UITextFieldD
     
     func setupForm() {
         buildAccountInfoSection()
-        buildLoginMethodsSection()
+        // Fully offline: no login methods, API token or server account
+        // actions exist. Only the local profile is shown.
         buildPublicProfileSection()
-        buildApiSection()
-        buildDangerSection()
     }
     
     // MARK: - Build Info Section
@@ -371,8 +370,7 @@ class AccountSettingsViewController: FormViewController, Themeable, UITextFieldD
 
     private func deleteAccount(password: String) {
         userRepository.deleteAccount(password: password, onLogoutComplete: {
-            (UIApplication.shared.delegate as? HabiticaAppDelegate)?.showLoginScreen()
-            UserManager.shared.logoutCompleted()
+            OfflineLocalUser.shared.ensureLocalUser()
         }).observeValues({ response in
             if response.statusCode == 401 {
                 DispatchQueue.main.async {

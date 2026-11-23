@@ -6,9 +6,6 @@
 //  Copyright © 2017 HabitRPG Inc. All rights reserved.
 //
 import Foundation
-import Habitica_API_Client
-import FirebaseCore
-import FirebaseRemoteConfig
 import Habitica_Models
 
 @objc

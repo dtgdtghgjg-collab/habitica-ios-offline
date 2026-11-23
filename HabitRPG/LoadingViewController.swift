@@ -57,41 +57,8 @@ class LoadingViewController: UIHostingController<LoadingPage> {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        if OfflineState.shared.isStandalone {
-            return
-        }
-        if AuthenticationManager.shared.hasAuthentication() {
-            userRepository = UserRepository()
-            let hasUserData = userRepository?.hasUserData() ?? false
-            userRepository?.retrieveUser()
-                .on(value: { user in
-                    let defaults = UserDefaults.standard
-                    defaults.set(user?.loginIncentives ?? 0, forKey: "loginIncentives")
-                    defaults.synchronize()
-                })
-                .flatMap(.latest, {[weak self] (_) in
-                    return self?.userRepository?.retrieveGroupPlans() ?? Signal.empty
-                })
-                .flatMap(.latest, {[weak self] (_) in
-                    return self?.userRepository?.retrieveInboxConversations() ?? Signal.empty
-                })
-                .flatMap(.latest, {[weak self] (_) in
-                    return self?.userRepository?.retrieveInAppRewards() ?? Signal.empty
-                })
-                .observeCompleted { [weak self] in
-                    self?.userRepository = nil
-                    if !hasUserData {
-                        self?.segueForLoggedInUser()
-                    }
-            }
-            
-            if let url = UserDefaults.standard.string(forKey: "initialScreenURL") {
-                loadingFinishedAction = {
-                    RouterHandler.shared.handle(urlString: url)
-                }
-            }
-            
-        }
+        // Fully offline: no server user to fetch, the local player already
+        // exists in Realm. Loading goes straight to the main screen.
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -100,37 +67,16 @@ class LoadingViewController: UIHostingController<LoadingPage> {
                 return
             }
         }
-        if OfflineState.shared.isStandalone {
-            segueForLoggedInUser()
-            super.viewDidAppear(animated)
-            return
-        }
-        if AuthenticationManager.shared.hasAuthentication() {
-            if let repository = userRepository, repository.hasUserData() == false {
-                viewModel.showProgress = true
-            } else {
-                segueForLoggedInUser()
-            }
-        } else {
-            if ConfigRepository.hasFetched {
-                completeInitialLaunch()
-            } else {
-                ConfigRepository.onFetchCompleted = {
-                    self.completeInitialLaunch()
-                }
-            }
-            
-        }
+        // Fully offline: always go to the main screen, never to login.
+        segueForLoggedInUser()
         super.viewDidAppear(animated)
     }
     
     private func completeInitialLaunch() {
+        // Fully offline: intro slides lead straight to the main screen,
+        // never to a login screen.
         DispatchQueue.main.async {
-            if self.configRepository.bool(variable: .disableIntroSlides) {
-                self.perform(segue: StoryboardSegue.Intro.loginSegue)
-            } else {
-                self.perform(segue: StoryboardSegue.Intro.introSegue)
-            }
+            self.segueForLoggedInUser()
         }
     }
     
@@ -161,11 +107,7 @@ class LoadingViewController: UIHostingController<LoadingPage> {
     }
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        if segue.identifier == StoryboardSegue.Intro.loginSegue.rawValue {
-            let navigationViewController = segue.destination as? UINavigationController
-            let loginViewController = navigationViewController?.topViewController as? LoginTableViewController
-            loginViewController?.isRootViewController = true
-        }
+        // Fully offline: no login segue to prepare for.
     }
     
     override var preferredStatusBarStyle: UIStatusBarStyle {

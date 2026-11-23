@@ -22,20 +22,10 @@ class GuidelinesViewController: BaseUIViewController {
         navigationItem.title = L10n.Titles.guidelines
         textView.isEditable = false
         
-        let urlString = "https://s3.amazonaws.com/habitica-assets/mobileApp/endpoint/community-guidelines.md"
-        guard let url = URL(string: urlString) else {
-            return
-        }
-        DispatchQueue.global(qos: .background).async { [weak self] in
-            if let text = try? String(contentsOf: url) {
-                let attributed = try? Down(markdownString: text).toHabiticaAttributedString()
-                DispatchQueue.main.async {
-                    self?.textView.attributedText = attributed
-                    self?.textView.isHidden = false
-                    self?.activityIndicator.isHidden = true
-                }
-            }
-        }
+        // Fully offline: guidelines are not fetched from the server.
+        textView.text = L10n.Titles.guidelines
+        textView.isHidden = false
+        activityIndicator.isHidden = true
     }
     
     override func applyTheme(theme: any Theme) {

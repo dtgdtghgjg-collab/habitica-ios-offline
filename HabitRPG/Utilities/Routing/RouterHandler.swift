@@ -8,7 +8,6 @@
 
 import Foundation
 import Habitica_Models
-import Habitica_API_Client
 
 class RouterHandler {
     public static let shared = RouterHandler()
@@ -300,9 +299,7 @@ class RouterHandler {
     
     @discardableResult
     func handle(url: URL) -> Bool {
-        if url.host == AuthenticatedCall.defaultConfiguration.host {
-            return handle(urlString: url.relativePath)
-        }
+        // Fully offline: no server host to filter, handle all paths locally.
         let path = url.relativePath
         if let call = directRoutes[path] {
             Task.detached {

@@ -28,24 +28,12 @@ enum ConfigVariable: Int {
 @objc
 class ConfigRepository: NSObject {
 
-    private static let configUrl = "https://s3.amazonaws.com/habitica-assets/mobileApp/endpoint/config-ios.json"
     private static let configVariables: [ConfigVariable] = [.enableRepeatables, .supportEmail, .enableNewShops, .shopSpriteSuffix]
     private let userConfig = UserDefaults.standard
 
     @objc
     func fetchremoteConfig() {
-        if OfflineState.shared.isStandalone {
-            return
-        }
-        Alamofire.request(ConfigRepository.configUrl).responseJSON { response in
-            if let JSON = response.result.value as? [String: Any] {
-                for variable in ConfigRepository.configVariables where JSON.contains(where: { (key, _) -> Bool in
-                    return key == variable.name()
-                }) {
-                    self.userConfig.set(JSON[variable.name()], forKey: variable.name())
-                }
-            }
-        }
+        // Fully offline: remote config is never fetched.
     }
 
     @objc

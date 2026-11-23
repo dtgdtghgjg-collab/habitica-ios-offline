@@ -13,7 +13,6 @@ final class OfflineState {
 
     static let shared = OfflineState()
 
-    private static let standaloneKey = "offlineStandalone_v1"
     private static let developerModeKey = "offlineDeveloperMode_v1"
 
     private let pendingRepository = PendingOperationRepository()
@@ -28,13 +27,11 @@ final class OfflineState {
         return !NetworkMonitor.shared.isOnlineNow
     }
 
-    /// When enabled the app never sends a write to the server and never lets a
+    /// Fully offline: the app never sends a write to the server and never lets a
     /// server response overwrite Realm. Realm is the single source of truth.
+    /// Standalone mode cannot be switched off.
     var isStandalone: Bool {
-        if UserDefaults.standard.object(forKey: Self.standaloneKey) == nil {
-            return true
-        }
-        return UserDefaults.standard.bool(forKey: Self.standaloneKey)
+        return true
     }
 
     /// Developer mode (Settings): shows the Developer section with the
@@ -76,17 +73,7 @@ final class OfflineState {
         refreshPendingCount()
     }
 
-    func setStandalone(_ value: Bool) {
-        UserDefaults.standard.set(value, forKey: Self.standaloneKey)
-        if value {
-            // Standalone mode keeps no server-bound queue: replaying it would
-            // let the server roll back locally earned progress.
-            if let userID = currentUserID {
-                pendingRepository.clear(userID: userID)
-            }
-        }
-        refreshPendingCount()
-    }
+    // Fully offline: standalone mode cannot be switched off, so there is no setter for it.
 
     func refreshPendingCount() {
         guard let userID = currentUserID else {

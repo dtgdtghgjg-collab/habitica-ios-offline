@@ -306,13 +306,7 @@ private class HabiticaStyler: DownStyler {
             attachment.image = UIImage(systemName: "photo", withConfiguration: configuration)
             str.replaceCharacters(in: NSRange(location: 0, length: str.length), with: addedString)
 
-            Task {
-                let response = try? (await URLSession.shared.data(from: imageURL))
-                guard let data = response?.0, let image = UIImage(data: data)?.resize(maxWidthHeight: 350) else {
-                    return
-                }
-                await attachment.setLoadedImage(image)
-            }
+            // Fully offline: remote images are never fetched, keep the placeholder.
         }
     }
 }

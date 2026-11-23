@@ -213,9 +213,20 @@ enum LocalScoreCalculator {
         if input.taskType != "reward", input.cron == false, direction == .up {
             leveledUp = applyExperience(&stats, input: input, computed: computed)
         }
-        stats.experience = max(0, stats.experience)
-        stats.health = max(0, min(stats.health, maxHealth))
-        stats.gold = max(0, stats.gold)
+       stats.experience = max(0, stats.experience)
+       stats.health = max(0, min(stats.health, maxHealth))
+       stats.gold = max(0, stats.gold)
+
+        // Death handling: if HP drops to 0 or below, character dies.
+        // On death: reset HP to max, lose 1 level, lose some gold.
+        if stats.health <= 0 {
+            stats.health = maxHealth
+            if stats.level > 1 {
+                stats.level -= 1
+                stats.experience = 0
+                stats.gold = max(0, stats.gold - 50) // Lose gold on death
+            }
+        }
 
         // The server unlocks "completedTask" on the first upward score.
         if input.cron == false && direction == .up {

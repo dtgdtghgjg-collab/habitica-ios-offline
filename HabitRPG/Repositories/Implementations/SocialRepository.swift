@@ -9,7 +9,6 @@
 import Foundation
 import ReactiveSwift
 import Habitica_Models
-import Habitica_API_Client
 import Habitica_Database
 
 // swiftlint:disable:next type_body_length
@@ -101,11 +100,13 @@ class SocialRepository: BaseRepository<SocialLocalRepository> {
     }
     
     func retrieveLookingForParty() -> Signal<[MemberProtocol]?, Never> {
-        return LookingForPartyCall().arraySignal
+        // Fully offline: no server party search.
+        return Signal.empty
     }
     
     func retrieveGroupInvites(groupID: String) -> Signal<[MemberProtocol]?, Never> {
-        return RetrieveGroupInvitesCall(groupID: groupID).arraySignal
+        // Fully offline: no server group invites.
+        return Signal.empty
     }
     
     func markChatAsSeen(groupID: String) -> Signal<EmptyResponseProtocol?, Never> {
@@ -449,11 +450,13 @@ class SocialRepository: BaseRepository<SocialLocalRepository> {
     }
 
     public func retrieveChallengeMembers(challengeID: String, includeAllPublicFields: Bool = true, lastID: String? = nil, search: String? = nil) -> Signal<[MemberProtocol]?, Never> {
-        return RetrieveChallengeMembersCall(challengeID: challengeID, includeAllPublicFields: includeAllPublicFields, lastID: lastID, search: search).arraySignal
+        // Fully offline: no server challenges.
+        return Signal.empty
     }
 
     public func retrieveChallengeMemberProgress(challengeID: String, memberID: String) -> Signal<ChallengeMemberProgressProtocol?, Never> {
-        return RetrieveChallengeMemberProgressCall(challengeID: challengeID, memberID: memberID).objectSignal
+        // Fully offline: no server challenges.
+        return Signal.empty
     }
 
     public func cloneChallenge(challengeID: String, challenge: ChallengeProtocol) -> Signal<ChallengeProtocol?, Error> {
@@ -611,8 +614,7 @@ class SocialRepository: BaseRepository<SocialLocalRepository> {
     }
     
     func retrieveMemberAchievements(userID: String) -> Signal<[AchievementProtocol]?, Never> {
-        return RetrieveAchievementsCall(userID: userID).objectSignal.map({ achievementList in
-            return achievementList?.achievements
-        })
+        // Fully offline: no server achievements.
+        return Signal.empty
     }
 }

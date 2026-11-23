@@ -9,7 +9,6 @@
 import Foundation
 import Habitica_Models
 import Habitica_Database
-import Habitica_API_Client
 import ReactiveSwift
 import Intents
 import RealmSwift
@@ -64,13 +63,7 @@ class TaskManager: BaseRepository<TaskLocalRepository> {
         if isStandalone {
             return
         }
-        NetworkAuthenticationManager.shared.currentUserId = AuthenticationManager.shared.currentUserId
-        NetworkAuthenticationManager.shared.currentUserKey = AuthenticationManager.shared.currentUserKey
-        updateServer()
-        // AuthenticatedCall.errorHandler = HabiticaNetworkErrorHandler()
-        let configuration = URLSessionConfiguration.default
-        // NetworkLogger.enableLogging(for: configuration)
-        AuthenticatedCall.defaultConfiguration.urlConfiguration = configuration
+        // Fully offline: no server client configured.
     }
     
     @objc
@@ -89,9 +82,7 @@ class TaskManager: BaseRepository<TaskLocalRepository> {
     }
 
     func updateServer() {
-        if let chosenServer = UserDefaults().string(forKey: "chosenServer") {
-            AuthenticatedCall.defaultConfiguration = HabiticaServerConfig.from(chosenServer)
-        }
+        // Fully offline: no server configuration needed.
     }
 
     func getTasks(predicate: NSPredicate, sortKey: String = "order") -> SignalProducer<ReactiveResults<[TaskProtocol]>, ReactiveSwiftRealmError> {
@@ -101,15 +92,8 @@ class TaskManager: BaseRepository<TaskLocalRepository> {
     }
 
     func retrieveTasks(dueOnDay: Date? = nil, type: String? = "todo") -> Signal<[TaskProtocol]?, Never> {
-        if isStandalone {
-            return Signal.empty
-        }
-        let call = RetrieveTasksCall(dueOnDay: dueOnDay, type: type)
-        return call.arraySignal.on(value: {[weak self] tasks in
-            if let tasks = tasks, dueOnDay == nil {
-                self?.localRepository.save(userID: self?.currentUserId, tasks: tasks)
-            }
-        })
+        // Fully offline: no server retrieval; rely on local Realm data.
+        return Signal.empty
     }
 
     func tasksForList(withName name: String, oncompletion: @escaping ([String]) -> Void) {
@@ -153,21 +137,12 @@ class TaskManager: BaseRepository<TaskLocalRepository> {
         // notes and start date specified for the sake of adding habits
         task.notes = ""
         task.startDate = Date()
-        // actually add the task and start it syncing with server
+        // actually add the task locally (no server sync in offline mode)
         localRepository.save(userID: currentUserId, task: task)
-        if isStandalone {
-            return Signal<TaskProtocol?, Never> { observer, _ in
-                observer.send(value: task)
-                observer.sendCompleted()
-            }
+        return Signal<TaskProtocol?, Never> { observer, _ in
+            observer.send(value: task)
+            observer.sendCompleted()
         }
-        localRepository.setTaskSyncing(userID: currentUserId, task: task, isSyncing: true)
-        let call = CreateTaskCall(task: task)
-        return call.objectSignal.on(value: {[weak self]returnedTask in
-            if let returnedTask = returnedTask {
-                self?.localRepository.save(userID: self?.currentUserId, task: returnedTask)
-            }
-        })
     }
 
     func getUser() -> SignalProducer<UserProtocol, ReactiveSwiftRealmError> {
@@ -177,17 +152,10 @@ class TaskManager: BaseRepository<TaskLocalRepository> {
     }
 
     func retrieveUser() -> Signal<UserProtocol?, Never> {
-        if isStandalone {
-            return Signal<UserProtocol?, Never> { observer, _ in
-                observer.send(value: self.userLocalRepository.getUserAsync(self.currentUserId ?? ""))
-                observer.sendCompleted()
-            }
+        // Fully offline: return user from local Realm database only.
+        return Signal<UserProtocol?, Never> { observer, _ in
+            observer.send(value: self.userLocalRepository.getUserAsync(self.currentUserId ?? ""))
+            observer.sendCompleted()
         }
-        let call = RetrieveUserCall()
-        return call.objectSignal.on(value: {[weak self] user in
-            if let user = user {
-                self?.userLocalRepository.save(user)
-            }
-        })
     }
 }

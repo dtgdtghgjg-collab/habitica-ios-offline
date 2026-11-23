@@ -7,7 +7,6 @@
 //
 
 import UIKit
-import Habitica_API_Client
 import Habitica_Models
 import RealmSwift
 import ReactiveSwift
@@ -58,19 +57,15 @@ class HabiticaAppDelegate: UIResponder, MessagingDelegate, UIApplicationDelegate
         setupInvalidCredentialsObserver()
         setupOfflineSupport()
         
+        // Fully offline: there is no server session to become unauthorized,
+        // so never log out or show a login screen. Just make sure the local
+        // player still exists.
         NotificationCenter.default.addObserver(
             forName: Notification.Name("userDidBecomeUnauthorized"),
             object: nil,
             queue: .main
-        ) { [weak self] _ in
-            guard let self = self else {
-                return
-            }
-            self.userRepository.logoutAccount { [weak self] in
-                self?.showLoginScreen()
-                UserManager.shared.logoutCompleted()
-                self?.contentRepository.retrieveContent(force: true).observeCompleted {}
-            }
+        ) { _ in
+            OfflineLocalUser.shared.ensureLocalUser()
         }
         KeyboardManager.shared.observeKeyboardNotifications()
         
@@ -109,10 +104,7 @@ class HabiticaAppDelegate: UIResponder, MessagingDelegate, UIApplicationDelegate
             AuthenticationManager.shared.currentUserKey = apiKey
         }
         
-        if let stubs = launchEnvironment["STUB_DATA"]?.data(using: .utf8) {
-            // swiftlint:disable:next force_try
-            HabiticaServerConfig.stubs = try! JSONDecoder().decode([String: CallStub].self, from: stubs)
-        }
+        // Fully offline: no STUB_DATA needed
         if let url = launchEnvironment["OPEN_URL"] {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1, execute: {
                 RouterHandler.shared.handle(urlString: url)
@@ -157,71 +149,23 @@ class HabiticaAppDelegate: UIResponder, MessagingDelegate, UIApplicationDelegate
     }
     
     func setupPurchaseHandling() {
-        #if !targetEnvironment(simulator)
-        PurchaseHandler.shared.completionHandler()
-        #endif
+        // Fully offline: no in-app purchases, no StoreKit.
     }
 
     func setupNetworkClient() {
-        NetworkAuthenticationManager.shared.currentUserId = AuthenticationManager.shared.currentUserId
-        NetworkAuthenticationManager.shared.currentUserKey = AuthenticationManager.shared.currentUserKey
-        updateServer()
-        AuthenticatedCall.errorHandler = HabiticaNetworkErrorHandler()
-        AuthenticatedCall.notificationListener = {[weak self] notifications in
-            guard let notifications = notifications else {
-                return
-            }
-            let unshownNotifications = NotificationManager.handle(notifications: notifications)
-            self?.userRepository.saveNotifications(unshownNotifications)
-        }
-        let configuration = URLSessionConfiguration.default
-        AuthenticatedCall.defaultConfiguration.urlConfiguration = configuration
-        
-        let userDefaults = UserDefaults.standard
-        for (key, etag) in userDefaults.dictionaryRepresentation().filter({ (key, _) -> Bool in
-            return key.starts(with: "etag")
-        }) {
-            HabiticaServerConfig.etags[String(key.dropFirst(4))] = etag as? String
-        }
+        // Fully offline: no server client, no etags, no network error handler.
     }
     
     func updateServer() {
-        if isBeingTested {
-            AuthenticatedCall.defaultConfiguration = HabiticaServerConfig.stub
-            return
-        }
-        HabiticaServerConfig.authHash = Secrets.authHash
-        if let host = ProcessInfo.processInfo.environment["CUSTOM_DOMAIN"], let apiVersion = configRepository.string(variable: .apiVersion) {
-            let config = ServerConfiguration(scheme: "https", host: host, apiRoute: "api/\(apiVersion.isEmpty ? "v4" : apiVersion)")
-            AuthenticatedCall.defaultConfiguration = config
-            return
-        }
-        if let chosenServer = UserDefaults().string(forKey: "chosenServer") {
-            if chosenServer == "production" {
-                let configRepository = ConfigRepository.shared
-                if let host = configRepository.string(variable: .prodHost), let apiVersion = configRepository.string(variable: .apiVersion) {
-                    let config = ServerConfiguration(scheme: "https", host: host, apiRoute: "api/\(apiVersion.isEmpty ? "v4" : apiVersion)")
-                    AuthenticatedCall.defaultConfiguration = config
-                } else {
-                    AuthenticatedCall.defaultConfiguration = HabiticaServerConfig.production
-                }
-            } else {
-                AuthenticatedCall.defaultConfiguration = HabiticaServerConfig.from(chosenServer)
-            }
-        } else {
-            let configRepository = ConfigRepository.shared
-            if let host = configRepository.string(variable: .prodHost), let apiVersion = configRepository.string(variable: .apiVersion), !host.isEmpty, !apiVersion.isEmpty {
-                let config = ServerConfiguration(scheme: "https", host: host, apiRoute: "api/\(apiVersion)")
-                AuthenticatedCall.defaultConfiguration = config
-            } else {
-                AuthenticatedCall.defaultConfiguration = HabiticaServerConfig.production
-            }
-        }
+        // Fully offline: no server configuration needed.
     }
     
     private func setupOfflineSupport() {
-        OfflineSyncEngine.shared.start()
-        OfflineCronEngine.shared.start()
+        // Standalone: start the local cron engine so daily rollover runs
+        // on launch, on foreground and while the app is open.
+        if OfflineState.shared.isStandalone {
+            OfflineCronEngine.shared.start()
+        }
     }
 
     func setupDatabase() {
@@ -257,40 +201,9 @@ class HabiticaAppDelegate: UIResponder, MessagingDelegate, UIApplicationDelegate
     
     @objc
     private func handleInvalidCredentials() {
-        DispatchQueue.main.async { [weak self] in
-            self?.userRepository.logoutAccount { [weak self] in
-                self?.showLoginScreen()
-                UserManager.shared.logoutCompleted()
-                self?.contentRepository.retrieveContent(force: true).observeCompleted {}
-            }
-        }
-    }
-    
-    func showLoginScreen() {
-        let currentWindow = UIApplication.shared.connectedScenes
-                .compactMap { $0 as? UIWindowScene }
-                .first?.windows
-                .first { $0.isKeyWindow }
-        
-        if let window = currentWindow {
-            if let presented = window.rootViewController?.presentedViewController {
-                presented.dismiss(animated: false) {
-                    let storyboard = UIStoryboard(name: "Intro", bundle: nil)
-                    if let loginViewController = storyboard.instantiateViewController(withIdentifier: "LoginTableViewController") as? LoginTableViewController {
-                        loginViewController.isRootViewController = true
-                        window.rootViewController = loginViewController
-                        window.makeKeyAndVisible()
-                    }
-                }
-            } else {
-                let storyboard = UIStoryboard(name: "Intro", bundle: nil)
-                if let loginViewController = storyboard.instantiateViewController(withIdentifier: "LoginTableViewController") as? LoginTableViewController {
-                    loginViewController.isRootViewController = true
-                    window.rootViewController = loginViewController
-                    window.makeKeyAndVisible()
-                }
-            }
-        }
+        // Fully offline: no server credentials exist, so there is nothing
+        // to invalidate and no login screen to show.
+        OfflineLocalUser.shared.ensureLocalUser()
     }
     
     func handleInitialLaunch() {
@@ -299,7 +212,7 @@ class HabiticaAppDelegate: UIResponder, MessagingDelegate, UIApplicationDelegate
             defaults.set(true, forKey: "wasLaunchedBefore")
             
             var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
-            components.hour = 19
+            components.hour = 9
             components.minute = 0
             let newDate = Calendar.current.date(from: components)
             
@@ -310,8 +223,21 @@ class HabiticaAppDelegate: UIResponder, MessagingDelegate, UIApplicationDelegate
             
             rescheduleDailyReminder()
         }
+        // Local daily rollover: check on every launch, not just the first one.
+        performDailyRolloverIfNeeded()
     }
-    
+
+    /// Checks the last rollover date against the Habitica day boundary and
+    /// runs the local daily rollover when a new day has started.
+    private func performDailyRolloverIfNeeded() {
+        OfflineCronEngine.shared.runIfNeeded()
+    }
+
+    func applicationWillEnterForeground(_ application: UIApplication) {
+        // Check for a new day when the player returns to the app.
+        OfflineCronEngine.shared.runIfNeeded()
+    }
+
     func retrieveTasks(_ completed: @escaping ((Bool) -> Void)) {
         taskRepository.retrieveTasks().observeResult { (result) in
             switch result {
@@ -399,49 +325,7 @@ class HabiticaAppDelegate: UIResponder, MessagingDelegate, UIApplicationDelegate
     }
     
     func applySearchAdAttribution() {
-        if OfflineState.shared.isStandalone {
-            return
-        }
-        if UserDefaults.standard.bool(forKey: "userWasAttributed") {
-            return
-        }
-        DispatchQueue.global(qos: .background).async { [weak self] in
-            do {
-            let attributionToken = try AAAttribution.attributionToken()
-            if let url = URL(string: "https://api-adservices.apple.com/api/v1/") {
-                let request = NSMutableURLRequest(url: url)
-                request.httpMethod = "POST"
-                request.setValue("text/plain", forHTTPHeaderField: "Content-Type")
-                request.httpBody = Data(attributionToken.utf8)
-                let task = URLSession.shared.dataTask(with: request as URLRequest) { (data, _, error) in
-                    if let error = error {
-                        logger.log(error)
-                        return
-                    }
-                    guard let data = data else {
-                        return
-                    }
-
-                    do {
-                        guard let data = try JSONSerialization.jsonObject(with: data, options: .allowFragments) as? [String: Any] else {
-                            return
-                        }
-
-                        self?.handleCampaign(data)
-                    } catch {
-                        if (error as NSError).code == 3840 {
-                            UserDefaults.standard.set(true, forKey: "userWasAttributed")
-                            return
-                        }
-                        logger.log(error)
-                    }
-                }
-                task.resume()
-            }
-            } catch {
-                // pass
-            }
-        }
+        // Fully offline: no search-ad attribution and no network call.
     }
     
     private func handleCampaign(_ data: [String: Any]) {

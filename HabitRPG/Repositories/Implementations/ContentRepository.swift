@@ -9,53 +9,17 @@
 import Foundation
 import Habitica_Database
 import Habitica_Models
-import Habitica_API_Client
 import ReactiveSwift
 
 class ContentRepository: BaseRepository<ContentLocalRepository> {
     
     func retrieveContent(force: Bool = false) -> Signal<ContentProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal.empty
-        }
-        let defaults = UserDefaults.standard
-        let lastContentFetch = defaults.object(forKey: "lastContentFetch") as? NSDate
-        let lastContentFetchVersion = defaults.object(forKey: "lastContentFetchVersion") as? String
-        let currentBuildNumber = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
-        let lastContentAppLanguageCode = defaults.object(forKey: "lastContentAppLanguageCode") as? String
-        let currentAppLanguageCode = LanguageHandler.getAppLanguage().code
-
-        if force ||
-            lastContentFetch == nil ||
-            (lastContentFetch?.timeIntervalSinceNow ?? 0) < -3600 ||
-            currentAppLanguageCode != lastContentAppLanguageCode ||
-            lastContentFetchVersion != currentBuildNumber {
-            return RetrieveContentCall(language: currentAppLanguageCode, forceLoading: force).objectSignal.on(value: {[weak self] content in
-                if let content = content {
-                    self?.localRepository.save(content)
-                    defaults.setValue(Date(), forKey: "lastContentFetch")
-                    defaults.setValue(currentBuildNumber, forKey: "lastContentFetchVersion")
-                    defaults.setValue(currentAppLanguageCode, forKey: "lastContentAppLanguageCode")
-                }
-            })
-        }
+        // Fully offline: content comes from the bundled seed only.
         return Signal.empty
     }
     
     func retrieveWorldState(force: Bool = false) -> Signal<WorldStateProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal.empty
-        }
-        let defaults = UserDefaults.standard
-        let lastWorldStateFetch = defaults.object(forKey: "lastWorldStateFetch") as? NSDate
-        if force || lastWorldStateFetch == nil || (lastWorldStateFetch?.timeIntervalSinceNow ?? 0) < -600 {
-            return RetrieveWorldStateCall().objectSignal.on(value: {[weak self] worldState in
-                if let worldState = worldState {
-                    self?.localRepository.save(worldState)
-                    defaults.setValue(Date(), forKey: "lastWorldStateFetch")
-                }
-            })
-        }
+        // Fully offline: no server world state.
         return Signal.empty
     }
     
@@ -76,17 +40,13 @@ class ContentRepository: BaseRepository<ContentLocalRepository> {
     }
     
     func retrieveHallOfContributors() -> Signal<[MemberProtocol]?, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal.empty
-        }
-        return RetrieveHallOfContributorsCall().arraySignal
+        // Fully offline: no server hall of contributors.
+        return Signal.empty
     }
     
     func retrieveHallOfPatrons() -> Signal<[MemberProtocol]?, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal.empty
-        }
-        return RetrieveHallOfPatronsCall().arraySignal
+        // Fully offline: no server hall of patrons.
+        return Signal.empty
     }
     
     func clearDatabase() {

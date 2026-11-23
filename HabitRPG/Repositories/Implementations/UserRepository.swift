@@ -9,7 +9,6 @@
 import Foundation
 import Habitica_Models
 import Habitica_Database
-import Habitica_API_Client
 import ReactiveSwift
 import WidgetKit
 
@@ -21,43 +20,19 @@ class UserRepository: BaseRepository<UserLocalRepository> {
     var taskRepository = TaskRepository()
     
     func retrieveUser(withTasks: Bool = true, forced: Bool = false) -> Signal<UserProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal<UserProtocol?, Never> { observer, _ in
-                observer.send(value: self.localRepository.getUserAsync(self.currentUserId ?? ""))
-                observer.sendCompleted()
-            }
-        }
-        let signal = RetrieveUserCall(forceLoading: forced).objectSignal.on(value: { user in
-            if let user = user {
-                self.localRepository.save(user)
-            }
-        })
-        if withTasks {
-            let taskCall = RetrieveTasksCall(forceLoading: forced)
-            return signal.combineLatest(with: taskCall.arraySignal).on(value: { (user, tasks) in
-                if let tasks = tasks, let order = user?.tasksOrder {
-                    self.taskRepository.save(tasks, order: order)
-                }
-            }).map({ (user, _) in
-                return user
-            })
-        } else {
-            return signal
+        // Fully offline: user comes from Realm only, never from the server.
+        return Signal<UserProtocol?, Never> { observer, _ in
+            observer.send(value: self.localRepository.getUserAsync(self.currentUserId ?? ""))
+            observer.sendCompleted()
         }
     }
     
     func syncUserStats() -> Signal<UserProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal<UserProtocol?, Never> { observer, _ in
-                observer.send(value: self.localRepository.getUserAsync(self.currentUserId ?? ""))
-                observer.sendCompleted()
-            }
+        // Fully offline: stats come from Realm only.
+        return Signal<UserProtocol?, Never> { observer, _ in
+            observer.send(value: self.localRepository.getUserAsync(self.currentUserId ?? ""))
+            observer.sendCompleted()
         }
-        return SyncUserStatsCall().objectSignal.on(value: { user in
-            if let user = user {
-                self.localRepository.save(user)
-            }
-        })
     }
     
     func getUser() -> SignalProducer<UserProtocol, ReactiveSwiftRealmError> {
@@ -67,37 +42,24 @@ class UserRepository: BaseRepository<UserLocalRepository> {
     }
     
     func allocate(attributePoint: String) -> Signal<StatsProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            Self.allocatePointsLocally(attribute: attributePoint)
-            return Signal<StatsProtocol?, Never> { observer, _ in
-                observer.send(value: localRepository.getUserAsync(currentUserId ?? "")?.stats)
-                observer.sendCompleted()
-            }
+        // Fully offline: points are allocated locally only.
+        Self.allocatePointsLocally(attribute: attributePoint)
+        return Signal<StatsProtocol?, Never> { observer, _ in
+            observer.send(value: localRepository.getUserAsync(currentUserId ?? "")?.stats)
+            observer.sendCompleted()
         }
-        return AllocateAttributePointCall(attribute: attributePoint).objectSignal.on(value: {[weak self] stats in
-            if let userId = self?.currentUserId, let stats = stats {
-                self?.localRepository.save(userId, stats: stats)
-            }
-        })
     }
 
     func bulkAllocate(strength: Int, intelligence: Int, constitution: Int, perception: Int) -> Signal<StatsProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            Self.allocatePointsLocally(strength: strength,
-                                       intelligence: intelligence,
-                                       constitution: constitution,
-                                       perception: perception)
-            return Signal<StatsProtocol?, Never> { observer, _ in
-                observer.send(value: localRepository.getUserAsync(currentUserId ?? "")?.stats)
-                observer.sendCompleted()
-            }
+        // Fully offline: points are allocated locally only.
+        Self.allocatePointsLocally(strength: strength,
+                                   intelligence: intelligence,
+                                   constitution: constitution,
+                                   perception: perception)
+        return Signal<StatsProtocol?, Never> { observer, _ in
+            observer.send(value: localRepository.getUserAsync(currentUserId ?? "")?.stats)
+            observer.sendCompleted()
         }
-        return BulkAllocateAttributePointsCall(strength: strength, intelligence: intelligence, constitution: constitution, perception: perception)
-            .objectSignal.on(value: { stats in
-            if let userId = self.currentUserId, let stats = stats {
-                self.localRepository.save(userId, stats: stats)
-            }
-        })
     }
 
     /// Distributes unallocated points locally. The absolute stat values are
@@ -152,76 +114,27 @@ class UserRepository: BaseRepository<UserLocalRepository> {
     }
     
     func useSkill(skill: SkillProtocol, targetId: String? = nil) -> Signal<SkillResponseProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal.empty
-        }
-        return getUser().take(first: 1).startWithSignal { signal, _ in
-            return UseSkillCall(key: skill.key ?? "", target: skill.target ?? "", targetID: targetId).objectSignal
-                .zip(with: signal.flatMapError { _ in Signal.empty })
-                .on(value: {[weak self] values in
-                    guard let skillResponse = values.0 else {
-                        return
-                    }
-                    let toastView = ToastView(title: L10n.Skills.useSkill(skill.text ?? ""),
-                                              rightIcon: HabiticaIcons.imageOfMagic,
-                                              rightText: "-\(skill.mana)",
-                                            rightTextColor: UIColor.blue10,
-                                            background: .blue,
-                                            delay: 0.5)
-                    ToastManager.show(toast: toastView)
-                    let newDamage = skillResponse.user?.party?.quest?.progress?.up ?? 0
-                        let oldDamage = values.1.party?.quest?.progress?.up ?? 0
-                        if newDamage > oldDamage {
-                            ToastManager.show(toast: ToastView(title: L10n.Skills.causedDamage,
-                                                      rightIcon: HabiticaIcons.imageOfDamage,
-                                                      rightText: "+\(newDamage - oldDamage)",
-                                                      rightTextColor: UIColor.green10,
-                                                      background: .green,
-                                                      delay: 0.5))
-                        }
-                    self?.localRepository.save(userID: self?.currentUserId, skillResponse: skillResponse)
-                    UINotificationFeedbackGenerator.oneShotNotificationOccurred(.success)
-                })
-                .map { $0.0 }
-        }
+        // Fully offline: no server skills.
+        return Signal.empty
     }
     
     func useTransformationItem(item: SpecialItemProtocol, targetId: String) -> Signal<UserProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            localRepository.usedTransformationItem(userID: currentUserId ?? "", key: item.key ?? "")
-            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now()+1) {
-                ToastManager.show(text: L10n.Skills.usedTransformationItem(item.text ?? ""), color: .gray)
-            }
-            return Signal<UserProtocol?, Never> { observer, _ in
-                observer.send(value: self.localRepository.getUserAsync(self.currentUserId ?? ""))
-                observer.sendCompleted()
-            }
+        // Fully offline: transformation applies locally only.
+        localRepository.usedTransformationItem(userID: currentUserId ?? "", key: item.key ?? "")
+        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now()+1) {
+            ToastManager.show(text: L10n.Skills.usedTransformationItem(item.text ?? ""), color: .gray)
         }
-        return UseTransformationItemCall(item: item, target: targetId).objectSignal
-            .on(value: {[weak self] _ in
-            self?.localRepository.usedTransformationItem(userID: self?.currentUserId ?? "", key: item.key ?? "")
-            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now()+1) {
-                ToastManager.show(text: L10n.Skills.usedTransformationItem(item.text ?? ""), color: .gray)
-            }
-        })
-            .flatMap(.latest, { _ in
-                if targetId == self.currentUserId {
-                    return self.retrieveUser().producer
-                } else {
-                    return SignalProducer.empty
-                }
-            })
+        return Signal<UserProtocol?, Never> { observer, _ in
+            observer.send(value: self.localRepository.getUserAsync(self.currentUserId ?? ""))
+            observer.sendCompleted()
+        }
     }
     
     func useDebuffItem(key: String) -> Signal<UserProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal<UserProtocol?, Never> { observer, _ in
-                observer.send(value: self.localRepository.getUserAsync(self.currentUserId ?? ""))
-                observer.sendCompleted()
-            }
-        }
-        return UseSkillCall(key: key).objectSignal.flatMap(.latest) {[weak self] _ in
-            return self?.retrieveUser() ?? Signal.empty
+        // Fully offline: debuff applies locally only.
+        return Signal<UserProtocol?, Never> { observer, _ in
+            observer.send(value: self.localRepository.getUserAsync(self.currentUserId ?? ""))
+            observer.sendCompleted()
         }
     }
     
@@ -229,67 +142,18 @@ class UserRepository: BaseRepository<UserLocalRepository> {
         guard !UserManager.shared.isLoggingOut else {
             return
         }
-
-        if OfflineState.shared.isOffline || OfflineState.shared.isStandalone {
-            // The local rollover already happened. In standalone mode there
-            // is no server cron to queue; enqueueCron() is a no-op there.
-            OfflineSyncEngine.shared.enqueueCron()
-            return
-        }
-
-        var disposable: Disposable?
-        getUser().take(first: 1).on(value: {[weak self]user in
-            guard !UserManager.shared.isLoggingOut else {
-                return
-            }
-            self?.localRepository.updateCall { _ in
-                user.needsCron = false
-            }
-        }).start()
-        
-        var producer: SignalProducer<TaskResponseProtocol?, Never> = SignalProducer(value: nil)
-        if checklistItems.isEmpty == false {
-            for entry in checklistItems {
-                producer = producer.flatMap(.concat, { [weak self] _  in
-                    return self?.taskRepository.score(checklistItem: entry.1, task: entry.0).producer ?? SignalProducer.empty
-                }).map({ _ in
-                    return nil
-                })
-            }
-        }
-        if tasks.isEmpty == false {
-            for task in tasks {
-                producer = producer.flatMap(.concat, {[weak self] _ in
-                    return self?.taskRepository.score(task: task, direction: .up).producer ?? SignalProducer.empty
-                })
-            }
-        }
-        
-        disposable = producer.flatMap(.latest, { _ -> SignalProducer<URLResponse, Never> in
-            let call = RunCronCall()
-            call.serverErrorSignal.on(value: { error in
-                HabiticaAnalytics.shared.log("cron_failed", withEventProperties: [
-                    "error": error.localizedDescription
-                ])
-            }).observeCompleted {}
-            return call.responseSignal.producer
-        }).flatMap(.latest, { _ in
-            return self.retrieveUser().producer
-        }).on(completed: {
-            disposable?.dispose()
-            WidgetCenter.shared.reloadAllTimelines()
-        }).start()
+        // Fully offline: the local rollover already happened, there is no
+        // server cron to run; enqueueCron() is a no-op there.
+        OfflineSyncEngine.shared.enqueueCron()
     }
     
     func updateUser(_ updateDict: [String: Encodable?]) -> Signal<UserProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            applyUserUpdateLocally(updateDict)
-            return Signal<UserProtocol?, Never> { observer, _ in
-                observer.send(value: localRepository.getUserAsync(currentUserId ?? ""))
-                observer.sendCompleted()
-            }
+        // Fully offline: updates apply locally only.
+        applyUserUpdateLocally(updateDict)
+        return Signal<UserProtocol?, Never> { observer, _ in
+            observer.send(value: localRepository.getUserAsync(currentUserId ?? ""))
+            observer.sendCompleted()
         }
-        return UpdateUserCall(updateDict).objectSignal.on(value: handleUserUpdate())
     }
     
     func updateUser(key: String, value: Encodable?) -> Signal<UserProtocol?, Never> {
@@ -297,34 +161,22 @@ class UserRepository: BaseRepository<UserLocalRepository> {
     }
     
     func updateDayStartTime(_ time: Int) -> Signal<UserProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            if let userID = OfflineState.shared.currentUserID {
-                OfflineMutationRepository().updateDayStart(userID: userID, dayStart: time)
-            }
-            return Signal<UserProtocol?, Never> { observer, _ in
-                observer.send(value: self.localRepository.getUserAsync(self.currentUserId ?? ""))
-                observer.sendCompleted()
-            }
+        // Fully offline: day start is stored locally only.
+        if let userID = OfflineState.shared.currentUserID {
+            OfflineMutationRepository().updateDayStart(userID: userID, dayStart: time)
         }
-        let call = UpdateDayStartTimeCall(time)
-        
-        return call.objectSignal.flatMap(.latest, { _ in return self.retrieveUser() })
+        return Signal<UserProtocol?, Never> { observer, _ in
+            observer.send(value: self.localRepository.getUserAsync(self.currentUserId ?? ""))
+            observer.sendCompleted()
+        }
     }
     
     func sleep() -> Signal<EmptyResponseProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            if let userID = currentUserId {
-                localRepository.toggleSleep(userID)
-            }
-            return Signal.empty
+        // Fully offline: sleep toggles locally only.
+        if let userID = currentUserId {
+            localRepository.toggleSleep(userID)
         }
-        let call = SleepCall()
-        
-        return call.objectSignal.on(value: {[weak self]_ in
-            if let userID = self?.currentUserId {
-                self?.localRepository.toggleSleep(userID)
-            }
-        })
+        return Signal.empty
     }
     
     private func updateAuth(response: LoginResponseProtocol?) {
@@ -339,361 +191,169 @@ class UserRepository: BaseRepository<UserLocalRepository> {
     }
     
     func login(username: String, password: String) -> Signal<LoginResponseProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            OfflineLocalUser.shared.ensureLocalUser()
-            let response = APILoginResponse()
-            response.id = OfflineState.shared.currentUserID
-            response.apiToken = "offline-local"
-            response.newUser = false
-            updateAuth(response: response)
-            return Signal<LoginResponseProtocol?, Never> { observer, _ in
-                observer.send(value: response)
-                observer.sendCompleted()
-            }
+        // Fully offline: always the local player, never a server login.
+        OfflineLocalUser.shared.ensureLocalUser()
+        let response = APILoginResponse()
+        response.id = OfflineState.shared.currentUserID
+        response.apiToken = "offline-local"
+        response.newUser = false
+        updateAuth(response: response)
+        return Signal<LoginResponseProtocol?, Never> { observer, _ in
+            observer.send(value: response)
+            observer.sendCompleted()
         }
-        let call = LocalLoginCall(username: username, password: password)
-        
-        return call.objectSignal.merge(with: call.responseSignal.map({ _ -> LoginResponseProtocol? in
-            return nil
-        })).merge(with: call.errorSignal.map({ _ -> LoginResponseProtocol? in
-            return nil
-        }))
-            .on(value: { loginResponse in
-            self.updateAuth(response: loginResponse)
-        })
     }
     
     func register(username: String, password: String, confirmPassword: String, email: String) -> Signal<LoginResponseProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            OfflineLocalUser.shared.ensureLocalUser()
-            if let userID = OfflineState.shared.currentUserID, !username.isEmpty {
-                OfflineProfile.shared.updateProfile(userID: userID, name: username, blurb: nil)
-            }
-            let response = APILoginResponse()
-            response.id = OfflineState.shared.currentUserID
-            response.apiToken = "offline-local"
-            response.newUser = true
-            updateAuth(response: response)
-            return Signal<LoginResponseProtocol?, Never> { observer, _ in
-                observer.send(value: response)
-                observer.sendCompleted()
-            }
+        // Fully offline: registration just ensures the local player exists.
+        OfflineLocalUser.shared.ensureLocalUser()
+        if let userID = OfflineState.shared.currentUserID, !username.isEmpty {
+            OfflineProfile.shared.updateProfile(userID: userID, name: username, blurb: nil)
         }
-        return LocalRegisterCall(username: username, password: password, confirmPassword: confirmPassword, email: email).objectSignal.on(value: { loginResponse in
-            self.updateAuth(response: loginResponse)
-        })
+        let response = APILoginResponse()
+        response.id = OfflineState.shared.currentUserID
+        response.apiToken = "offline-local"
+        response.newUser = true
+        updateAuth(response: response)
+        return Signal<LoginResponseProtocol?, Never> { observer, _ in
+            observer.send(value: response)
+            observer.sendCompleted()
+        }
     }
     
     func login(userID: String, network: String, accessToken: String, allowRegister: Bool) -> Signal<LoginResponseProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            OfflineLocalUser.shared.ensureLocalUser()
-            let response = APILoginResponse()
-            response.id = OfflineState.shared.currentUserID
-            response.apiToken = "offline-local"
-            response.newUser = allowRegister
-            updateAuth(response: response)
-            return Signal<LoginResponseProtocol?, Never> { observer, _ in
-                observer.send(value: response)
-                observer.sendCompleted()
-            }
+        // Fully offline: social login is removed, always the local player.
+        OfflineLocalUser.shared.ensureLocalUser()
+        let response = APILoginResponse()
+        response.id = OfflineState.shared.currentUserID
+        response.apiToken = "offline-local"
+        response.newUser = allowRegister
+        updateAuth(response: response)
+        return Signal<LoginResponseProtocol?, Never> { observer, _ in
+            observer.send(value: response)
+            observer.sendCompleted()
         }
-        let call = SocialLoginCall(userID: userID, network: network, accessToken: accessToken, allowRegister: allowRegister)
-        return call.objectSignal.merge(with: call.httpResponseSignal.map({ response -> LoginResponseProtocol? in
-            if response.statusCode == 200 {
-                return nil
-            }
-            let response = APILoginResponse()
-            response.newUser = true
-            return response
-        }).filter({ response in
-            return response != nil
-        })).on(value: { loginResponse in
-            self.updateAuth(response: loginResponse)
-        })
     }
     
     func loginApple(identityToken: String, name: String, email: String, allowRegister: Bool) -> Signal<LoginResponseProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            OfflineLocalUser.shared.ensureLocalUser()
-            if let userID = OfflineState.shared.currentUserID, !name.isEmpty {
-                OfflineProfile.shared.updateProfile(userID: userID, name: name, blurb: nil)
-            }
-            let response = APILoginResponse()
-            response.id = OfflineState.shared.currentUserID
-            response.apiToken = "offline-local"
-            response.newUser = allowRegister
-            updateAuth(response: response)
-            return Signal<LoginResponseProtocol?, Never> { observer, _ in
-                observer.send(value: response)
-                observer.sendCompleted()
-            }
+        // Fully offline: Apple sign-in is removed, always the local player.
+        OfflineLocalUser.shared.ensureLocalUser()
+        if let userID = OfflineState.shared.currentUserID, !name.isEmpty {
+            OfflineProfile.shared.updateProfile(userID: userID, name: name, blurb: nil)
         }
-        let call = AppleLoginCall(identityToken: identityToken, name: name, email: email, allowRegister: allowRegister)
-        return call.objectSignal.merge(with: call.jsonSignal.map({ response -> LoginResponseProtocol? in
-            if let json = response as? [String: Any], json["id_token"] == nil {
-                return nil
-            }
-            let loginResponse = APILoginResponse()
-            loginResponse.newUser = true
-            return loginResponse
-        }).filter({ response in
-            return response != nil
-        })).on(value: { loginResponse in
-            self.updateAuth(response: loginResponse)
-        })
+        let response = APILoginResponse()
+        response.id = OfflineState.shared.currentUserID
+        response.apiToken = "offline-local"
+        response.newUser = allowRegister
+        updateAuth(response: response)
+        return Signal<LoginResponseProtocol?, Never> { observer, _ in
+            observer.send(value: response)
+            observer.sendCompleted()
+        }
     }
     
     func disconnectSocial(_ network: String) -> Signal<EmptyResponseProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal.empty
-        }
-        return SocialDisconnectCall(network: network).objectSignal
+        // Fully offline: no social accounts to disconnect.
+        return Signal.empty
     }
     
     func resetAccount(password: String) -> Signal<UserProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal.empty
-        }
-        return ResetAccountCall(password: password).objectSignal.flatMap(.latest, {[weak self] (_) in
-            return self?.retrieveUser() ?? Signal.empty
-        })
+        // Fully offline: no server account to reset.
+        return Signal.empty
     }
     
     func deleteAccount(password: String, onLogoutComplete: (() -> Void)? = nil) -> Signal<HTTPURLResponse, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal.empty
-        }
-        return DeleteAccountCall(password: password).httpResponseSignal.on(value: {[weak self] response in
-            if response.statusCode == 200 {
-                self?.logoutAccount(completion: onLogoutComplete)
-            }
-        })
+        // Fully offline: no server account to delete.
+        return Signal.empty
     }
     
     func logoutAccount(completion: (() -> Void)? = nil) {
-        guard !UserManager.shared.isLoggingOut else {
-            completion?()
-            return
-        }
-        UserManager.shared.prepareForLogout()
-
-        URLSession.shared.getAllTasks { tasks in
-            tasks.forEach { $0.cancel() }
-        }
-
-        let userID = currentUserId
-
-        let defaults = UserDefaults.standard
-        let themeMode = defaults.string(forKey: "themeMode")
-        let launchScreen = defaults.string(forKey: "initialScreenURL")
-        let customUrlEnabled = defaults.bool(forKey: "customUrlEnabled")
-        let customServerUrl = defaults.string(forKey: "customUrl")
-        let chosenCustomServer = defaults.string(forKey: "chosenServer")
-
-        defaults.dictionaryRepresentation().keys.forEach { defaults.removeObject(forKey: $0) }
-        defaults.set(themeMode, forKey: "themeMode")
-        defaults.set(launchScreen, forKey: "initialScreenURL")
-        defaults.set(customUrlEnabled, forKey: "customUrlEnabled")
-        defaults.set(customServerUrl, forKey: "customUrl")
-        defaults.set(chosenCustomServer, forKey: "chosenServer")
-
-        if let userID = userID {
-            var hasFinalized = false
-            let finalize = { [weak self] in
-                DispatchQueue.main.async {
-                    guard !hasFinalized else {
-                        return
-                    }
-                    hasFinalized = true
-                    self?.finalizeLogout(userID: userID, completion: completion)
-                }
-            }
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                finalize()
-            }
-
-            deregisterPushDevice().observe { event in
-                switch event {
-                case .completed, .interrupted:
-                    finalize()
-                default:
-                    break
-                }
-            }
-        } else {
-            DispatchQueue.main.async { [weak self] in
-                self?.localRepository.clearDatabase()
-                completion?()
-            }
-        }
-    }
-
-    private func finalizeLogout(userID: String, completion: (() -> Void)?) {
-        AuthenticationManager.shared.clearAuthentication(userId: userID)
-        localRepository.clearDatabase()
+        // Fully offline: there is no account to log out of. Never wipe
+        // the local Realm data or clear the local authentication.
         completion?()
     }
+
+    // Fully offline: logout never clears the local database.
     
     func updateEmail(newEmail: String, password: String) -> Signal<UserProtocol, ReactiveSwiftRealmError> {
-        if OfflineState.shared.isStandalone {
-            localRepository.updateCall { _ in
-                if let user = self.localRepository.getUserAsync(self.currentUserId ?? ""),
-                   let local = user.authentication?.local {
-                    local.email = newEmail
-                }
-            }
-            return Signal<UserProtocol, ReactiveSwiftRealmError> { observer, _ in
-                if let user = self.localRepository.getUserAsync(self.currentUserId ?? "") {
-                    observer.send(value: user)
-                }
-                observer.sendCompleted()
+        // Fully offline: email is stored locally only.
+        localRepository.updateCall { _ in
+            if let user = self.localRepository.getUserAsync(self.currentUserId ?? ""),
+               let local = user.authentication?.local {
+                local.email = newEmail
             }
         }
-        let call = UpdateEmailCall(newEmail: newEmail, password: password)
-        
-        return call.objectSignal.flatMap(.concat, {[weak self] (_) in
-            return self?.getUser().take(first: 1) ?? SignalProducer.empty
-        }).on(value: {[weak self]user in
-            self?.localRepository.updateCall { _ in
-                if let local = user.authentication?.local {
-                    local.email = newEmail
-                }
+        return Signal<UserProtocol, ReactiveSwiftRealmError> { observer, _ in
+            if let user = self.localRepository.getUserAsync(self.currentUserId ?? "") {
+                observer.send(value: user)
             }
-        })
+            observer.sendCompleted()
+        }
     }
     
     func updateUsername(newUsername: String, password: String? = nil) -> Signal<UserProtocol, ReactiveSwiftRealmError> {
-        if OfflineState.shared.isStandalone {
-            if let userID = OfflineState.shared.currentUserID {
-                OfflineProfile.shared.updateProfile(userID: userID, name: newUsername, blurb: nil)
-                localRepository.updateCall { _ in
-                    if let user = self.localRepository.getUserAsync(userID) {
-                        user.flags?.verifiedUsername = true
-                    }
-                }
-            }
-            return Signal<UserProtocol, ReactiveSwiftRealmError> { observer, _ in
-                if let user = self.localRepository.getUserAsync(self.currentUserId ?? "") {
-                    observer.send(value: user)
-                }
-                observer.sendCompleted()
-            }
-        }
-        let call = UpdateUsernameCall(username: newUsername, password: password)
-        
-        return call.objectSignal
-            .filter({ (response) -> Bool in
-                return response != nil
-            })
-            .flatMap(.latest, {[weak self] _ in
-                return self?.retrieveUser(forced: true) ?? Signal.empty
-            })
-            .flatMap(.latest, {[weak self] (_) in
-                return self?.getUser().take(first: 1) ?? SignalProducer.empty
-        }).on(value: {[weak self]user in
-            self?.localRepository.updateCall { _ in
-                if let local = user.authentication?.local {
-                    local.username = newUsername
+        // Fully offline: username is stored locally only.
+        if let userID = OfflineState.shared.currentUserID {
+            OfflineProfile.shared.updateProfile(userID: userID, name: newUsername, blurb: nil)
+            localRepository.updateCall { _ in
+                if let user = self.localRepository.getUserAsync(userID) {
                     user.flags?.verifiedUsername = true
                 }
             }
-        })
+        }
+        return Signal<UserProtocol, ReactiveSwiftRealmError> { observer, _ in
+            if let user = self.localRepository.getUserAsync(self.currentUserId ?? "") {
+                observer.send(value: user)
+            }
+            observer.sendCompleted()
+        }
     }
     
     func verifyUsername(_ newUsername: String) -> Signal<VerifyUsernameResponse?, Never> {
-        if OfflineState.shared.isStandalone {
-            let response = APIVerifyUsernameResponse()
-            let isValid = newUsername.count >= 1 && newUsername.count <= 20
-                && newUsername.range(of: "[^a-zA-Z0-9_-]", options: .regularExpression) == nil
-            response.isUsable = isValid
-            response.issues = isValid ? [] : ["Invalid username"]
-            return Signal<VerifyUsernameResponse?, Never> { observer, _ in
-                observer.send(value: response)
-                observer.sendCompleted()
-            }
+        // Fully offline: username is validated locally only.
+        let response = APIVerifyUsernameResponse()
+        let isValid = newUsername.count >= 1 && newUsername.count <= 20
+            && newUsername.range(of: "[^a-zA-Z0-9_-]", options: .regularExpression) == nil
+        response.isUsable = isValid
+        response.issues = isValid ? [] : ["Invalid username"]
+        return Signal<VerifyUsernameResponse?, Never> { observer, _ in
+            observer.send(value: response)
+            observer.sendCompleted()
         }
-        let call = VerifyUsernameCall(username: newUsername)
-        return call.objectSignal
     }
     
     func checkEmail(_ newEmail: String) -> Signal<CheckEmailResponse?, Never> {
-        if OfflineState.shared.isStandalone {
-            let response = APICheckEmailResponse()
-            response.email = newEmail
-            response.valid = newEmail.isValidEmail()
-            response.error = response.valid ? nil : L10n.Login.emailInvalid
-            return Signal<CheckEmailResponse?, Never> { observer, _ in
-                observer.send(value: response)
-                observer.sendCompleted()
-            }
+        // Fully offline: email is validated locally only.
+        let response = APICheckEmailResponse()
+        response.email = newEmail
+        response.valid = newEmail.isValidEmail()
+        response.error = response.valid ? nil : L10n.Login.emailInvalid
+        return Signal<CheckEmailResponse?, Never> { observer, _ in
+            observer.send(value: response)
+            observer.sendCompleted()
         }
-        let call = CheckEmailCall(email: newEmail)
-        return call.objectSignal
     }
     
     func updatePassword(newPassword: String, password: String, confirmPassword: String) -> Signal<LoginResponseProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            let response = APILoginResponse()
-            response.id = OfflineState.shared.currentUserID
-            response.apiToken = "offline-local"
-            return Signal<LoginResponseProtocol?, Never> { observer, _ in
-                observer.send(value: response)
-                observer.sendCompleted()
-            }
+        // Fully offline: no server password, keep the local player.
+        let response = APILoginResponse()
+        response.id = OfflineState.shared.currentUserID
+        response.apiToken = "offline-local"
+        return Signal<LoginResponseProtocol?, Never> { observer, _ in
+            observer.send(value: response)
+            observer.sendCompleted()
         }
-            let call = UpdatePasswordCall(newPassword: newPassword, oldPassword: password, confirmPassword: confirmPassword)
-            
-            return call.objectSignal
-                .on(value: { loginResponse in
-                if let response = loginResponse {
-                    if response.id?.isEmpty == false {
-                        AuthenticationManager.shared.currentUserId = response.id
-                    }
-                    if response.apiToken?.isEmpty == false {
-                        AuthenticationManager.shared.currentUserKey = response.apiToken
-                        ToastManager.show(
-                                            text: L10n.Settings.updatedPassword,
-                                            color: .green
-                                        )
-                    }
-                }
-            })
-        }
+    }
     
     func revive() -> Signal<UserProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            if let userID = OfflineState.shared.currentUserID {
-                OfflineMutationRepository().revive(userID: userID)
-            }
-            return Signal<UserProtocol?, Never> { observer, _ in
-                observer.send(value: self.localRepository.getUserAsync(self.currentUserId ?? ""))
-                observer.sendCompleted()
-            }
+        // Fully offline: revive applies locally only.
+        if let userID = OfflineState.shared.currentUserID {
+            OfflineMutationRepository().revive(userID: userID)
         }
-        let call = ReviveUserCall().objectSignal
-        
-        return call
-            .on(value: { items in
-                self.localRepository.getUser(self.currentUserId ?? "").take(first: 1).map({ currentUser in
-                    return items?.gear?.owned.first(where: { equipment in
-                        equipment.isOwned == false && currentUser.items?.gear?.owned.contains(where: { $0.key == equipment.key && $0.isOwned == true }) == true
-                    })
-                })
-                .flatMap(.latest, { brokenItem in
-                    return InventoryLocalRepository().getGear(predicate: NSPredicate(format: "key == %@", brokenItem?.key ?? ""))
-                }).on(value: { items in
-                    if let itemText = items.value.first?.text {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                            ToastManager.show(text: "Your \(itemText) broke", color: .black, duration: 3.0)
-                        }
-                    }
-                })
-                .start()
-            })
-            .flatMap(.latest, {[weak self] (_) in
-            return self?.retrieveUser() ?? Signal.empty
-        })
+        return Signal<UserProtocol?, Never> { observer, _ in
+            observer.send(value: self.localRepository.getUserAsync(self.currentUserId ?? ""))
+            observer.sendCompleted()
+        }
     }
     
     func getUserStyleWithOutfitFor(class habiticaClass: HabiticaClass, userID: String? = nil) -> SignalProducer<UserStyleProtocol, ReactiveSwiftRealmError> {
@@ -705,16 +365,8 @@ class UserRepository: BaseRepository<UserLocalRepository> {
     }
     
     func retrieveInAppRewards() -> Signal<[InAppRewardProtocol]?, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal.empty
-        }
-        let call = RetrieveInAppRewardsCall(language: LanguageHandler.getAppLanguage().code)
-        
-        return call.arraySignal.on(value: { inAppRewards in
-            if let userID = self.currentUserId, let inAppRewards = inAppRewards {
-                self.localRepository.save(userID: userID, inAppRewards: inAppRewards)
-            }
-        })
+        // Fully offline: no server rewards.
+        return Signal.empty
     }
     
     func buyCustomReward(reward: TaskProtocol) -> Signal<TaskResponseProtocol?, Never> {
@@ -722,17 +374,8 @@ class UserRepository: BaseRepository<UserLocalRepository> {
     }
 
     func movePinnedItem(_ item: InAppRewardProtocol, toPosition: Int) -> Signal<[String]?, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal.empty
-        }
-        let call = MovePinnedItemCall(item: item, toPosition: toPosition)
-
-        return call.arraySignal.on(value: {[weak self] itemsOrder in
-            guard let userID = self?.currentUserId, let itemsOrder = itemsOrder else {
-                return
-            }
-            self?.localRepository.updatePinnedItemsOrder(userID: userID, order: itemsOrder)
-        })
+        // Fully offline: no server pinned items.
+        return Signal.empty
     }
     
     func disableClassSystem() -> Signal<UserProtocol?, Never> {
@@ -740,19 +383,14 @@ class UserRepository: BaseRepository<UserLocalRepository> {
             return Signal.empty
         }
         lastClassSelection = Date()
-        if OfflineState.shared.isStandalone {
-            if let userID = OfflineState.shared.currentUserID {
-                OfflineMutationRepository().disableClasses(userID: userID)
-            }
-            return Signal<UserProtocol?, Never> { observer, _ in
-                observer.send(value: self.localRepository.getUserAsync(self.currentUserId ?? ""))
-                observer.sendCompleted()
-            }
+        // Fully offline: classes are disabled locally only.
+        if let userID = OfflineState.shared.currentUserID {
+            OfflineMutationRepository().disableClasses(userID: userID)
         }
-        return DisableClassesCall().responseSignal
-            .flatMap(.latest, {[weak self] _ in
-                return self?.retrieveUser() ?? .empty
-            }).on(value: handleUserUpdate())
+        return Signal<UserProtocol?, Never> { observer, _ in
+            observer.send(value: self.localRepository.getUserAsync(self.currentUserId ?? ""))
+            observer.sendCompleted()
+        }
     }
     
     func selectClass(_ habiticaClass: HabiticaClass? = nil) -> Signal<UserProtocol?, Never> {
@@ -760,118 +398,62 @@ class UserRepository: BaseRepository<UserLocalRepository> {
             return Signal.empty
         }
         lastClassSelection = Date()
-        if OfflineState.shared.isStandalone {
-            if let userID = OfflineState.shared.currentUserID {
-                OfflineMutationRepository().selectClass(userID: userID, habitClass: habiticaClass?.rawValue)
-            }
-            if let habiticaClass = habiticaClass {
-                let viewController = HostingBottomSheetController(rootView: ClassConfirmationSheet(selectedClass: habiticaClass), prefersGrabberVisible: false)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    viewController.show()
-                }
-                UIApplication.requestReview()
-            }
-            return Signal<UserProtocol?, Never> { observer, _ in
-                observer.send(value: self.localRepository.getUserAsync(self.currentUserId ?? ""))
-                observer.sendCompleted()
-            }
+        // Fully offline: class is selected locally only.
+        if let userID = OfflineState.shared.currentUserID {
+            OfflineMutationRepository().selectClass(userID: userID, habitClass: habiticaClass?.rawValue)
         }
-        return SelectClassCall(class: habiticaClass).httpResponseSignal
-            .on(value: { response in
-                if response.statusCode == 200, let habiticaClass = habiticaClass {
-                    let viewController = HostingBottomSheetController(rootView: ClassConfirmationSheet(selectedClass: habiticaClass), prefersGrabberVisible: false)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        viewController.show()
-                    }
-                    
-                    UIApplication.requestReview()
-                }
-            })
-            .flatMap(.latest, { _ in
-                return self.retrieveUser(withTasks: false, forced: true)
-            })
-            .take(first: 1)
-            .on(value: handleUserUpdate())
+        if let habiticaClass = habiticaClass {
+            let viewController = HostingBottomSheetController(rootView: ClassConfirmationSheet(selectedClass: habiticaClass), prefersGrabberVisible: false)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                viewController.show()
+            }
+            UIApplication.requestReview()
+        }
+        return Signal<UserProtocol?, Never> { observer, _ in
+            observer.send(value: self.localRepository.getUserAsync(self.currentUserId ?? ""))
+            observer.sendCompleted()
+        }
     }
     
     func reroll() -> Signal<UserProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal.empty
-        }
-        return RerollCall().objectSignal
-            .on(value: { _ in
-                ToastManager.show(text: L10n.purchased("Fortify Potion"), color: .green, delay: 1)
-            })
-            .flatMap(.latest, {[weak self] (_) in
-            return self?.retrieveUser() ?? Signal.empty
-        })
+        // Fully offline: no server reroll.
+        return Signal.empty
     }
 
     func rebirth() -> Signal<UserProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal.empty
-        }
-        return RebirthCall().objectSignal
-            .on(value: {[weak self] user in
-                if let user = user {
-                    self?.localRepository.save(user)
-                }
-            })
-            .flatMap(.latest, {[weak self] (_) in
-            return self?.retrieveUser(forced: true) ?? Signal.empty
-        })
+        // Fully offline: no server rebirth.
+        return Signal.empty
     }
 
     func sendPasswordResetEmail(email: String) -> Signal<EmptyResponseProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal.empty
-        }
-        return SendPasswordResetEmailCall(email: email).objectSignal
+        // Fully offline: no password reset email.
+        return Signal.empty
     }
     
     func purchaseGems(receipt: [String: Any], recipient: String? = nil) -> Signal<HabiticaResponse<APIEmptyResponse>?, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal.empty
-        }
-        return PurchaseGemsCall(receipt: receipt, recipient: recipient).habiticaResponseSignal
+        // Fully offline: no gem purchases.
+        return Signal.empty
     }
     
     func sendGems(amount: Int, recipient: String) -> Signal<HabiticaResponse<APIEmptyResponse>?, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal.empty
-        }
-        return SendGemsCall(amount: amount, recipient: recipient).habiticaResponseSignal
+        // Fully offline: no gem sending.
+        return Signal.empty
     }
     
     func purchaseNoRenewSubscription(identifier: String, receipt: [String: Any], recipient: String? = nil) -> Signal<EmptyResponseProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal.empty
-        }
-        return PurchaseNoRenewSubscriptionCall(identifier: identifier, receipt: receipt, recipient: recipient).objectSignal
+        // Fully offline: no subscriptions.
+        return Signal.empty
     }
     
-    private static var lastSubscriptionCall: Date?
     func subscribe(sku: String, receipt: String) -> Signal<UserProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal.empty
-        }
-        if let lastCall = UserRepository.lastSubscriptionCall, lastCall.timeIntervalSinceNow > -15 {
-            return Signal.empty
-        }
-        UserRepository.lastSubscriptionCall = Date()
-        return SubscribeCall(sku: sku, receipt: receipt).objectSignal.flatMap(.latest) {[weak self] _ in
-            return self?.retrieveUser(withTasks: false, forced: true) ?? Signal.empty
-        }
+        // Fully offline: no subscriptions.
+        return Signal.empty
     }
     
     @discardableResult
     func cancelSubscription() -> Signal<UserProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal.empty
-        }
-        return CancelSubscribeCall().objectSignal.flatMap(.latest) {[weak self] _ in
-            return self?.retrieveUser(withTasks: false, forced: true) ?? Signal.empty
-        }
+        // Fully offline: no subscriptions.
+        return Signal.empty
     }
     
     func getTags() -> SignalProducer<ReactiveResults<[TagProtocol]>, ReactiveSwiftRealmError> {
@@ -881,27 +463,13 @@ class UserRepository: BaseRepository<UserLocalRepository> {
     }
     
     func retrieveInboxMessages(conversationID: String, page: Int) -> Signal<[InboxMessageProtocol]?, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal.empty
-        }
-        let call = RetrieveInboxMessagesCall(uuid: conversationID, page: page)
-        return call.arraySignal.on(value: {[weak self] messages in
-            if let messages = messages, let userID = self?.currentUserId {
-                self?.localRepository.save(userID: userID, messages: messages)
-            }
-        })
+        // Fully offline: no inbox from server.
+        return Signal.empty
     }
     
     func retrieveGroupPlans() -> Signal<[GroupPlanProtocol]?, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal.empty
-        }
-        let call = RetrieveGroupPlansCall()
-        return call.arraySignal.on(value: {[weak self] plans in
-            if let plans = plans, let userID = self?.currentUserId {
-                self?.localRepository.save(userID: userID, plans: plans)
-            }
-        })
+        // Fully offline: no group plans from server.
+        return Signal.empty
     }
     
     func getGroupPlans() -> SignalProducer<ReactiveResults<[GroupPlanProtocol]>, ReactiveSwiftRealmError> {
@@ -911,47 +479,17 @@ class UserRepository: BaseRepository<UserLocalRepository> {
     }
     
     func retrieveInboxConversations() -> Signal<[InboxConversationProtocol]?, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal.empty
-        }
-        let call = RetrieveInboxConversationsCall()
-        
-        return call.arraySignal.on(value: {[weak self] conversations in
-            if let conversations = conversations, let userID = self?.currentUserId {
-                self?.localRepository.save(userID: userID, conversations: conversations)
-            }
-        })
+        // Fully offline: no inbox from server.
+        return Signal.empty
     }
     
     func registerPushDevice(user: UserProtocol) -> Signal<EmptyResponseProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal.empty
-        }
-        if (lastPushDeviceSync?.timeIntervalSinceNow ?? -31) > -30 {
-            return Signal.empty
-        }
-        if let deviceID = UserDefaults().string(forKey: "PushNotificationDeviceToken") {
-            if user.pushDevices.contains(where: { (pushDevice) -> Bool in
-                return pushDevice.regId == deviceID
-            }) != true {
-                lastPushDeviceSync = Date()
-                let call = RegisterPushDeviceCall(regID: deviceID)
-                
-                return call.objectSignal
-            }
-        }
+        // Fully offline: no push registration.
         return Signal.empty
     }
     
     func deregisterPushDevice() -> Signal<EmptyResponseProtocol?, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal.empty
-        }
-        if let deviceID = UserDefaults().string(forKey: "PushNotificationDeviceToken") {
-            let call = DeregisterPushDeviceCall(regID: deviceID)
-            
-            return call.objectSignal
-        }
+        // Fully offline: no push deregistration.
         return Signal.empty
     }
     
@@ -974,16 +512,8 @@ class UserRepository: BaseRepository<UserLocalRepository> {
     }
     
     func retrieveAchievements() -> Signal<[AchievementProtocol]?, Never> {
-        if OfflineState.shared.isStandalone {
-            return Signal.empty
-        }
-        return RetrieveAchievementsCall(userID: currentUserId ?? "").objectSignal.map({ achievementList in
-            return achievementList?.achievements
-        }).on(value: {[weak self] achievements in
-            if let achievements = achievements {
-                self?.localRepository.save(userID: self?.currentUserId ?? "", achievements: achievements)
-            }
-        })
+        // Fully offline: no server achievements.
+        return Signal.empty
     }
     
     func getAchievements() -> SignalProducer<ReactiveResults<[AchievementProtocol]>, ReactiveSwiftRealmError> {
@@ -996,32 +526,15 @@ class UserRepository: BaseRepository<UserLocalRepository> {
         if !notification.isValid {
             return Signal.empty
         }
-        if OfflineState.shared.isStandalone {
-            localRepository.delete(object: notification)
-            return Signal.empty
-        }
-        if notification.id.contains("-invite-") {
-            localRepository.delete(object: notification)
-            return Signal.empty
-        } else {
-            let call = ReadNotificationCall(notificationID: notification.id)
-            
-            return call.arraySignal.on(value: {[weak self] notifications in
-                self?.saveNotifications(notifications)
-            })
-        }
+        // Fully offline: notifications are deleted locally only.
+        localRepository.delete(object: notification)
+        return Signal.empty
     }
     
     func readNotifications(notifications: [NotificationProtocol]) -> Signal<[NotificationProtocol]?, Never> {
-        if OfflineState.shared.isStandalone {
-            notifications.forEach { localRepository.delete(object: $0) }
-            return Signal.empty
-        }
-        let call = ReadNotificationsCall(notificationIDs: notifications.map({ $0.id }))
-        
-        return call.arraySignal.on(value: {[weak self] notifications in
-            self?.saveNotifications(notifications)
-        })
+        // Fully offline: notifications are deleted locally only.
+        notifications.forEach { localRepository.delete(object: $0) }
+        return Signal.empty
     }
     
     func createNotification(id: String, type: HabiticaNotificationType) -> NotificationProtocol {

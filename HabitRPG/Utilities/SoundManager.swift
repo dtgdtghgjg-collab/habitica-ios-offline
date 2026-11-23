@@ -204,35 +204,6 @@ class SoundManager {
     }
     
     private func load(soundEffect: SoundEffect) {
-        if OfflineState.shared.isStandalone {
-            return
-        }
-        let effectPath = "\(currentTheme.rawValue)/\(soundEffect.rawValue).mp3"
-        guard let url = URL(string: "https://s3.amazonaws.com/habitica-assets/mobileApp/sounds/\(effectPath)") else {
-            return
-        }
-        guard let soundsDirectory = self.soundsDirectory else {
-            return
-        }
-        let localUrl = soundsDirectory.appendingPathComponent(effectPath)
-        if FileManager.default.fileExists(atPath: localUrl.path) {
-            return
-        }
-        let sessionConfig = URLSessionConfiguration.default
-        let session = URLSession(configuration: sessionConfig)
-        let request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad)
-        
-        let task = session.downloadTask(with: request) { (tempLocalUrl, _, error) in
-            if let tempLocalUrl = tempLocalUrl, error == nil {
-                do {
-                    try FileManager.default.moveItem(at: tempLocalUrl, to: localUrl)
-                } catch let writeError {
-                    logger.log("error writing file \(localUrl) : \(writeError)")
-                }
-            } else {
-                logger.log("Failure: \(error?.localizedDescription ?? "")")
-            }
-        }
-        task.resume()
+        // Fully offline: sound effects are never downloaded.
     }
 }
