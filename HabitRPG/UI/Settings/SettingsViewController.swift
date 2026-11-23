@@ -365,7 +365,6 @@ class SettingsViewController: FormViewController, Themeable {
                 })
             }
             // No log out in fully offline mode: there is no account to leave.
-        }
     }
     // swiftlint:disable:next cyclomatic_complexity function_body_length
     private func setupSettingsSections() {
