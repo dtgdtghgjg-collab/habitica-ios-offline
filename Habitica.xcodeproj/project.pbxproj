@@ -886,6 +886,9 @@
 				0FF1CE00000000000000A020 /* OfflineAchievementManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineAchievementManager.swift; sourceTree = "<group>"; };
 		0FF1CE00000000000000A022 /* OfflineContentSeeder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineContentSeeder.swift; sourceTree = "<group>"; };
 		0FF1CE00000000000000A024 /* OfflineLocalUser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineLocalUser.swift; sourceTree = "<group>"; };
+		0FF1CE00000000000000A031 /* HabiticaResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HabiticaResponse.swift; sourceTree = "<group>"; };
+		0FF1CE00000000000000A032 /* APIClientTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClientTypes.swift; sourceTree = "<group>"; };
+		0FF1CE00000000000000A033 /* APIEmptyResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIEmptyResponse.swift; sourceTree = "<group>"; };
 		0FF1CE00000000000000A026 /* content.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = content.json; sourceTree = "<group>"; };
 		0FF1CE00000000000000A007 /* OfflineScoreEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineScoreEngine.swift; sourceTree = "<group>"; };
 		0FF1CE00000000000000A009 /* OfflineCronEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCronEngine.swift; sourceTree = "<group>"; };
@@ -1704,6 +1707,9 @@
 				0FF1CE00000000000000A020 /* OfflineAchievementManager.swift */,
 				0FF1CE00000000000000A022 /* OfflineContentSeeder.swift */,
 				0FF1CE00000000000000A024 /* OfflineLocalUser.swift */,
+				0FF1CE00000000000000A031 /* HabiticaResponse.swift */,
+				0FF1CE00000000000000A032 /* APIClientTypes.swift */,
+				0FF1CE00000000000000A033 /* APIEmptyResponse.swift */,
 				0FF1CE00000000000000A007 /* OfflineScoreEngine.swift */,
 				0FF1CE00000000000000A009 /* OfflineCronEngine.swift */,
 				0FF1CE00000000000000A00B /* OfflineSyncEngine.swift */,
@@ -4067,8 +4073,11 @@
 				FC900D986CC601050C4F4584 /* EndChallengeFlow.swift in Sources */,
 				2526B556D5CCD0754DDFE843 /* CheckParticipationFlow.swift in Sources */,
 				6B2B86527D424DB6D2E8F6D8 /* ChallengeListCard.swift in Sources */,
-				11FBD29CC1529227B4C6DC96 /* ChallengeDetailCards.swift in Sources */,
-			);
+		11FBD29CC1529227B4C6DC96 /* ChallengeDetailCards.swift in Sources */,
+		0FF1CE00000000000000A031 /* HabiticaResponse.swift in Sources */,
+		0FF1CE00000000000000A032 /* APIClientTypes.swift in Sources */,
+		0FF1CE00000000000000A033 /* APIEmptyResponse.swift in Sources */,
+		);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
