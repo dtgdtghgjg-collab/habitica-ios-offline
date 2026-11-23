@@ -55,10 +55,11 @@ final class OfflineCronEngine {
                 }
             })
 
-        // Schedule precise timer for next day transition.
-        let dayStart = userLocalRepository.preferencesDayStart()
-        scheduleNextCronTimer(dayStart: dayStart)
-    }
+       // Schedule precise timer for next day transition.
+        let userID = OfflineState.shared.currentUserID ?? ""
+        let dayStart = userLocalRepository.preferencesDayStart(for: userID)
+       scheduleNextCronTimer(dayStart: dayStart)
+   }
 
     /// Stops any running timer. Call on logout or when standalone mode ends.
     func stop() {
@@ -130,10 +131,11 @@ final class OfflineCronEngine {
             applyCronDamage(tasks: uncompletedDailies, userID: userID, stats: stats, user: user)
         }
 
-        mutationRepository.resetDailiesForNewDay(userID: userID)
-        if !OfflineState.shared.isStandalone {
-            OfflineSyncEngine.shared.enqueueCron()
-        }
+       mutationRepository.resetDailiesForNewDay(userID: userID)
+        mutationRepository.performDailyRollover(userID: userID)
+       if !OfflineState.shared.isStandalone {
+           OfflineSyncEngine.shared.enqueueCron()
+       }
 
         defaults.set(now, forKey: lastCronKey)
     }

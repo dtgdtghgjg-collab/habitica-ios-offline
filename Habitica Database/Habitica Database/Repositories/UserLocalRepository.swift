@@ -349,14 +349,13 @@ public class UserLocalRepository: BaseLocalRepository {
        }
    }
    
-    /// Returns the user's configured dayStart hour (0-23), default 0 if not set.
-    public func preferencesDayStart() -> Int {
-        guard let userID = OfflineState.shared.currentUserID,
-              let user = getUserAsync(userID) else {
+   /// Returns the user's configured dayStart hour (0-23), default 0 if not set.
+    public func preferencesDayStart(for userID: String) -> Int {
+        guard let user = getUserAsync(userID) else {
             return 0
         }
         return user.preferences?.dayStart ?? 0
-    }
+   }
 
     public func getUserStyleWithOutfitFor(class habiticaClass: HabiticaClass, userID: String) -> SignalProducer<UserStyleProtocol, ReactiveSwiftRealmError> {
         return RealmUser.findBy(key: userID).map({ (user) -> UserStyleProtocol in

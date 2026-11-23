@@ -1,0 +1,44 @@
+[33mcommit a22bb7c4d7bc6cb118ecd1db5f491e6f8eec4d92[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31moffline/main[m[33m)[m
+Author: truezxcfull-crypto <truezxcfull@gmail.com>
+Date:   Mon Nov 23 22:44:46 2026 +0300
+
+    Convert Habitica iOS app to fully offline version
+
+ HabitRPG/AppDelegate.swift                         | 184 [32m+[m[31m---[m
+ HabitRPG/Extensions/Down-Extensions.swift          |   8 [32m+[m[31m-[m
+ HabitRPG/LoadingViewController.swift               |  74 [32m+[m[31m-[m
+ HabitRPG/Offline/LocalScoreCalculator.swift        |  17 [32m+[m[31m-[m
+ HabitRPG/Offline/OfflineContentSeeder.swift        |  15 [32m+[m[31m-[m
+ HabitRPG/Offline/OfflineCronEngine.swift           |  40 [32m+[m
+ HabitRPG/Offline/OfflineState.swift                |  21 [32m+[m[31m-[m
+ HabitRPG/Offline/OfflineSyncEngine.swift           | 627 [32m+[m[31m-------------[m
+ HabitRPG/Repositories/ConfigRepository.swift       |   3 [31m-[m
+ .../Implementations/ConfigRepository.swift         |  14 [32m+[m[31m-[m
+ .../Implementations/ContentRepository.swift        |  52 [32m+[m[31m-[m
+ .../Implementations/CustomizationRepository.swift  |  48 [32m+[m[31m-[m
+ .../Implementations/InventoryRepository.swift      | 227 [32m++[m[31m---[m
+ .../Implementations/SocialRepository.swift         |  18 [32m+[m[31m-[m
+ .../Implementations/TaskRepositoryImpl.swift       | 328 [32m++[m[31m------[m
+ .../Implementations/UserRepository.swift           | 925 [32m+++++[m[31m----------------[m
+ HabitRPG/UI/General/MainMenuViewController.swift   |   6 [32m+[m[31m-[m
+ HabitRPG/UI/Intro/IntroViewController.swift        |  19 [32m+[m[31m-[m
+ .../AccountSettingsViewController+Apple.swift      |   9 [32m+[m
+ .../Settings/AccountSettingsViewController.swift   |   8 [32m+[m[31m-[m
+ HabitRPG/UI/Settings/SettingsViewController.swift  |  26 [32m+[m[31m-[m
+ HabitRPG/UI/Support/GuidelinesViewController.swift |  18 [32m+[m[31m-[m
+ HabitRPG/Utilities/AuthenticationManager.swift     |  28 [32m+[m[31m-[m
+ HabitRPG/Utilities/ImageManager.swift              |   3 [32m+[m[31m-[m
+ HabitRPG/Utilities/NetworkErrorHandler.swift       |   3 [32m+[m[31m-[m
+ HabitRPG/Utilities/Routing/RegexRoute.swift        |   1 [31m-[m
+ HabitRPG/Utilities/Routing/Route.swift             |   1 [31m-[m
+ HabitRPG/Utilities/Routing/RouteMatch.swift        |   1 [31m-[m
+ HabitRPG/Utilities/Routing/RouterHandler.swift     |   5 [32m+[m[31m-[m
+ HabitRPG/Utilities/SoundManager.swift              |  31 [32m+[m[31m-[m
+ .../Repositories/OfflineMutationRepository.swift   |  32 [32m+[m
+ .../Repositories/UserLocalRepository.swift         |  87 [32m+[m[31m-[m
+ Habitica Intents/TaskManager.swift                 |  56 [32m+[m[31m-[m
+ .../Habitica Models/APICheckEmailResponse.swift    |  16 [32m+[m
+ .../Habitica Models/APILoginResponse.swift         |  16 [32m+[m
+ Habitica.xcodeproj/project.pbxproj                 |  18 [32m+[m[31m-[m
+ RegexRoute.swift                                   |   1 [31m-[m
+ 37 files changed, 655 insertions(+), 2331 deletions(-)

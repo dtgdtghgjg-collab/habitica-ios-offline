@@ -390,37 +390,34 @@ public class OfflineMutationRepository: BaseLocalRepository {
         }
     }
 
-    /// Performs a full local daily rollover: unchecks all dailies, recomputes
-    /// their "due" flag, resets habit counters and stamps the user's lastCron.
-    /// Safe to call repeatedly; a no-op when there is no local user.
-    public func performDailyRollover() {
-        guard let userID = OfflineState.shared.currentUserID else {
-            return
-        }
-        let today = Date()
-        updateCall { realm in
-            // Reset dailies: unchecked and recompute due flag.
-            let dailies = realm.objects(RealmTask.self).filter("ownerID == %@ AND type == 'daily'", userID)
-            for task in dailies {
-                task.completed = false
-                if task.realmNextDue.isEmpty == false {
-                    task.isDue = task.dueOn(date: today)
-                }
-            }
+   /// Performs a full local daily rollover: unchecks all dailies, recomputes
+   /// their "due" flag, resets habit counters and stamps the user's lastCron.
+   /// Safe to call repeatedly; a no-op when there is no local user.
+    public func performDailyRollover(userID: String) {
+       let today = Date()
+       updateCall { realm in
+           // Reset dailies: unchecked and recompute due flag.
+           let dailies = realm.objects(RealmTask.self).filter("ownerID == %@ AND type == 'daily'", userID)
+           for task in dailies {
+               task.completed = false
+               if task.realmNextDue.isEmpty == false {
+                   task.isDue = task.dueOn(date: today)
+               }
+           }
 
-            // Reset habit counters.
-            let habits = realm.objects(RealmTask.self).filter("ownerID == %@ AND type == 'habit'", userID)
-            for task in habits {
-                task.counterUp = 0
-                task.counterDown = 0
-            }
+           // Reset habit counters.
+           let habits = realm.objects(RealmTask.self).filter("ownerID == %@ AND type == 'habit'", userID)
+           for task in habits {
+               task.counterUp = 0
+               task.counterDown = 0
+           }
 
-            // Stamp lastCron on the user.
-            if let user = realm.object(ofType: RealmUser.self, forPrimaryKey: userID) {
-                user.lastCron = today
-            }
-        }
-    }
+           // Stamp lastCron on the user.
+           if let user = realm.object(ofType: RealmUser.self, forPrimaryKey: userID) {
+               user.lastCron = today
+           }
+       }
+   }
     // MARK: - Standalone economy
 
     /// Sets the player's gold. Realm is the source of truth, so this is the
