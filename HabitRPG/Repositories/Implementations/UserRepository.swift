@@ -9,6 +9,7 @@
 import Foundation
 import Habitica_Models
 import Habitica_Database
+import Habitica_API_Client
 import ReactiveSwift
 import WidgetKit
 
